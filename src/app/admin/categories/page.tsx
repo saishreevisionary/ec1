@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Folder, X, Upload } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Category } from '@/lib/seedData';
+import { useToast } from '@/context/ToastContext';
 
 export default function AdminCategoryManagement() {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -39,7 +41,7 @@ export default function AdminCategoryManagement() {
     setEditingCategory(null);
     setName('');
     setDescription('');
-    setImageUrl('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600');
+    setImageUrl('');
     setIsModalOpen(true);
   };
 
@@ -54,7 +56,7 @@ export default function AdminCategoryManagement() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !imageUrl) {
-      alert("Please fill in the category name and image URL.");
+      showToast("Please fill in the category name and select/paste an image.", "error");
       return;
     }
 
@@ -74,7 +76,7 @@ export default function AdminCategoryManagement() {
     await db.saveCategory(payload);
     setIsModalOpen(false);
     loadCategories();
-    alert(editingCategory ? "Category updated." : "Category added.");
+    showToast(editingCategory ? "Category updated successfully!" : "Category added successfully!");
   };
 
   const handleDeleteCategory = async (id: number) => {
@@ -173,7 +175,7 @@ export default function AdminCategoryManagement() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="Audio & Acoustics"
+                  placeholder="e.g. Rosemary Range or Follicle Serums"
                 />
               </div>
 

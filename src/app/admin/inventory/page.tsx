@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowUpRight, Search, Check, Save, ShieldAlert } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Product, Category } from '@/lib/seedData';
+import { useToast } from '@/context/ToastContext';
 
 export default function AdminInventory() {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +37,7 @@ export default function AdminInventory() {
 
   const handleSaveStock = async (prod: Product) => {
     if (newQty === '' || newThreshold === '') {
-      alert("Fields cannot be empty.");
+      showToast("Fields cannot be empty.", "error");
       return;
     }
     
@@ -48,6 +50,7 @@ export default function AdminInventory() {
     await db.saveProduct(updated);
     setEditingStockId(null);
     loadData();
+    showToast("Inventory stock levels updated successfully!");
   };
 
   // Filter computations

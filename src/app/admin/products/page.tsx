@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, X, FolderKanban, Check, Info, Upload } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Product, Category } from '@/lib/seedData';
+import { useToast } from '@/context/ToastContext';
 
 export default function AdminProductManagement() {
+  const { showToast } = useToast();
   // DB States
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -23,7 +25,7 @@ export default function AdminProductManagement() {
   const [stockQty, setStockQty] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [galleryUrls, setGalleryUrls] = useState(''); // Textarea split by comma
+  const [galleryList, setGalleryList] = useState<string[]>([]);
   const [description, setDescription] = useState('');
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,6 +37,23 @@ export default function AdminProductManagement() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setGalleryList(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleRemoveGalleryImage = (indexToRemove: number) => {
+    setGalleryList(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   useEffect(() => {
@@ -55,8 +74,8 @@ export default function AdminProductManagement() {
     setSku(`PRO-${Math.floor(100 + Math.random() * 900)}`);
     setStockQty('50');
     setCategoryId(categories[0]?.id.toString() || '1');
-    setImageUrl('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600');
-    setGalleryUrls('');
+    setImageUrl('');
+    setGalleryList([]);
     setDescription('');
     setIsModalOpen(true);
   };
@@ -69,7 +88,7 @@ export default function AdminProductManagement() {
     setStockQty(prod.stock_quantity.toString());
     setCategoryId(prod.category_id.toString());
     setImageUrl(prod.image_url);
-    setGalleryUrls(prod.images ? prod.images.join(', ') : '');
+    setGalleryList(prod.images || []);
     setDescription(prod.description);
     setIsModalOpen(true);
   };
@@ -77,13 +96,13 @@ export default function AdminProductManagement() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price || !sku || !stockQty || !categoryId || !imageUrl) {
-      alert("Please fill in all required fields.");
+      showToast("Please fill in all required fields.", "error");
       return;
     }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const images = galleryUrls.split(',').map(url => url.trim()).filter(url => url !== '');
-    if (!images.includes(imageUrl)) {
+    const images = [...galleryList];
+    if (imageUrl && !images.includes(imageUrl)) {
       images.unshift(imageUrl);
     }
 
@@ -108,7 +127,7 @@ export default function AdminProductManagement() {
     await db.saveProduct(payload);
     setIsModalOpen(false);
     loadData();
-    alert(editingProduct ? "Product updated." : "Product added.");
+    showToast(editingProduct ? "Product updated successfully!" : "Product added successfully!");
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -265,7 +284,7 @@ export default function AdminProductManagement() {
             </button>
 
             <h3 className="text-base font-bold text-primary mb-4 border-b border-slate-100 pb-2.5">
-              {editingProduct ? 'Edit Premium Hardware' : 'Scaffold New Product'}
+              {editingProduct ? 'Edit Product Specifications' : 'Create New Botanical Product'}
             </h3>
 
             <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -279,7 +298,7 @@ export default function AdminProductManagement() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                    placeholder="Lendora SoundStage Extreme"
+                    placeholder="e.g. Rosemary Hair Density Serum"
                   />
                 </div>
                 
@@ -379,13 +398,40 @@ export default function AdminProductManagement() {
               </div>
 
               <div>
-                <label className="block text-[9px] font-bold uppercase text-primary mb-1">Gallery Slider Image URLs (Optional, comma-separated)</label>
-                <textarea
-                  value={galleryUrls}
-                  onChange={(e) => setGalleryUrls(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary h-16"
-                  placeholder="https://image1.jpg, https://image2.jpg"
-                />
+                <label className="block text-[9px] font-bold uppercase text-primary mb-1">Product Gallery Images (Optional)</label>
+                <div className="space-y-3">
+                  {/* Multiple File Uploader */}
+                  <div className="border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-xl p-3.5 bg-slate-50/50 flex flex-col items-center justify-center text-center cursor-pointer relative transition-all">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleGalleryUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                    <span className="text-[10px] font-bold text-primary">Upload Multiple Gallery Images</span>
+                    <span className="text-[8px] text-slate-400">Drag files here or click to browse</span>
+                  </div>
+
+                  {/* Thumbnail Row */}
+                  {galleryList.length > 0 && (
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 p-3 bg-white border border-slate-150 rounded-xl">
+                      {galleryList.map((img, idx) => (
+                        <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                          <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryImage(idx)}
+                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-90 hover:opacity-100 transition-opacity shadow active:scale-95"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

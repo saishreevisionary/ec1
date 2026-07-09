@@ -92,6 +92,9 @@ export const db = {
   async saveCategory(category: Partial<Category>): Promise<Category> {
     if (supabase) {
       const { data, error } = await supabase.from('categories').upsert(category).select().single();
+      if (error) {
+        console.log("[DB_SAVE_CATEGORY_ERROR] categories table upsert error:", error);
+      }
       if (!error && data) return data;
     }
     const categories = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
@@ -125,8 +128,15 @@ export const db = {
   // --- PRODUCTS ---
   async getProducts(): Promise<Product[]> {
     if (supabase) {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (!error && data) return data;
+      const { data, error } = await supabase.from('products').select('*, product_images(*)').order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map((item: any) => {
+          const images = item.product_images?.length 
+            ? item.product_images.sort((a: any, b: any) => a.display_order - b.display_order).map((img: any) => img.image_url)
+            : [item.image_url];
+          return { ...item, images };
+        });
+      }
     }
     return getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
   },
@@ -135,7 +145,6 @@ export const db = {
     if (supabase) {
       const { data, error } = await supabase.from('products').select('*, product_images(*)').eq('slug', slug).single();
       if (!error && data) {
-        // Map product_images if exists
         const images = data.product_images?.length 
           ? data.product_images.sort((a: any, b: any) => a.display_order - b.display_order).map((img: any) => img.image_url)
           : [data.image_url];
@@ -148,8 +157,42 @@ export const db = {
 
   async saveProduct(product: Partial<Product>): Promise<Product> {
     if (supabase) {
-      const { data, error } = await supabase.from('products').upsert(product).select().single();
-      if (!error && data) return data;
+      // 1. Separate images and specs which do not exist on public.products table
+      const { images, specs, ...dbProduct } = product as any;
+
+      // 2. Perform the upsert to public.products table
+      const { data, error } = await supabase.from('products').upsert(dbProduct).select().single();
+      
+      if (error) {
+        console.log("[DB_SAVE_PRODUCT_ERROR] products table upsert error:", error);
+      }
+
+      if (!error && data) {
+        // 3. Sync product gallery images if specified
+        if (images && Array.isArray(images)) {
+          // Clear current product images
+          const { error: deleteError } = await supabase.from('product_images').delete().eq('product_id', data.id);
+          if (deleteError) {
+            console.log("[DB_SAVE_PRODUCT_ERROR] deleting old product images error:", deleteError);
+          }
+
+          // Insert new image records
+          if (images.length > 0) {
+            const imageRows = images.map((url: string, index: number) => ({
+              product_id: data.id,
+              image_url: url,
+              display_order: index
+            }));
+            const { error: insertError } = await supabase.from('product_images').insert(imageRows);
+            if (insertError) {
+              console.log("[DB_SAVE_PRODUCT_ERROR] inserting new product images error:", insertError);
+            }
+          }
+        }
+
+        // Return the combined product structure
+        return { ...data, images: images || [data.image_url] };
+      }
     }
     const products = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
     if (product.id) {

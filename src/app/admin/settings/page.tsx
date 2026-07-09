@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Layout, QrCode, PhoneCall, Percent, Settings, Check } from 'lucide-react';
 import { db } from '@/lib/db';
+import { useToast } from '@/context/ToastContext';
 
 export default function AdminSettings() {
+  const { showToast } = useToast();
   const [activePanel, setActivePanel] = useState<'banner' | 'qr' | 'contact' | 'general'>('banner');
   const [loading, setLoading] = useState(true);
 
@@ -76,19 +78,19 @@ export default function AdminSettings() {
   const handleSaveBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     await db.saveSetting('banner_settings', banner);
-    alert("Store banner settings updated successfully.");
+    showToast("Store banner settings updated successfully.");
   };
 
   const handleSaveQr = async (e: React.FormEvent) => {
     e.preventDefault();
     await db.saveSetting('qr_settings', qr);
-    alert("UPI QR payment configurations updated successfully.");
+    showToast("UPI QR payment configurations updated successfully.");
   };
 
   const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
     await db.saveSetting('contact_settings', contact);
-    alert("Contact support information updated successfully.");
+    showToast("Contact support information updated successfully.");
   };
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
@@ -97,7 +99,7 @@ export default function AdminSettings() {
     
     // Save logo settings text too
     await db.saveSetting('logo_settings', { text: general.logo_text, url: "" });
-    alert("General settings updated successfully.");
+    showToast("General settings updated successfully.");
   };
 
   if (loading) {

@@ -134,7 +134,7 @@ export default function ProductDetailsPage() {
               <img
                 src={activeImage}
                 alt={product.name}
-                className="w-full h-full object-cover object-center transition-all duration-300"
+                className="w-full h-full object-contain p-4 transition-all duration-300"
               />
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
@@ -156,7 +156,7 @@ export default function ProductDetailsPage() {
                       activeImage === img ? 'border-primary shadow-sm scale-95' : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt={`${product.name} thumbnail ${idx}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`${product.name} thumbnail ${idx}`} className="w-full h-full object-contain p-1" />
                   </button>
                 ))}
               </div>

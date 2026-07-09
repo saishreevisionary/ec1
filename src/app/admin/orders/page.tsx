@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingBag, Eye, X, CheckCircle, Clock, Truck, Ban, Printer } from 'lucide-react';
 import { db } from '@/lib/db';
+import { useToast } from '@/context/ToastContext';
 
 export default function AdminOrders() {
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -24,7 +26,7 @@ export default function AdminOrders() {
   const handleStatusChange = async (id: string, newStatus: string) => {
     await db.updateOrderStatus(id, newStatus);
     loadOrders();
-    alert(`Order status updated to: ${newStatus}`);
+    showToast(`Order status updated to: ${newStatus}`);
   };
 
   // Filter orders
