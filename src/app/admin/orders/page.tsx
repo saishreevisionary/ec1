@@ -104,7 +104,7 @@ export default function AdminOrders() {
                           <span className="text-[9px] text-slate-400 block">{ord.shipping_phone}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-3 font-bold text-primary">${ord.grand_total}</td>
+                      <td className="py-3.5 px-3 font-bold text-primary">₹{ord.grand_total}</td>
                       <td className="py-3.5 px-3">
                         {ord.payment_screenshot_url ? (
                           <a 
@@ -175,9 +175,9 @@ export default function AdminOrders() {
                   <div key={idx} className="flex gap-4 items-center justify-between text-xs font-light">
                     <div>
                       <p className="font-semibold text-primary">{item.products?.name || 'Curated Product'}</p>
-                      <p className="text-[9px] text-slate-400 mt-0.5">Quantity: {item.quantity} × ${item.price_at_purchase} (18% GST)</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">Quantity: {item.quantity} × ₹{item.price_at_purchase} (18% GST)</p>
                     </div>
-                    <span className="font-semibold text-primary">${item.price_at_purchase * item.quantity}</span>
+                    <span className="font-semibold text-primary">₹{item.price_at_purchase * item.quantity}</span>
                   </div>
                 ))}
               </div>
@@ -195,15 +195,15 @@ export default function AdminOrders() {
                 <p className="font-bold text-primary uppercase tracking-wider text-[9px] mb-1">Financial totals</p>
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-primary">${selectedOrder.subtotal}</span>
+                  <span className="font-semibold text-primary">₹{selectedOrder.subtotal}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>GST Amount</span>
-                  <span className="font-semibold text-primary">${selectedOrder.gst_amount}</span>
+                  <span className="font-semibold text-primary">₹{selectedOrder.gst_amount}</span>
                 </div>
                 <div className="border-t border-slate-100 pt-1.5 flex justify-between font-extrabold text-primary">
                   <span>Grand Total</span>
-                  <span>${selectedOrder.grand_total}</span>
+                  <span>₹{selectedOrder.grand_total}</span>
                 </div>
               </div>
             </div>

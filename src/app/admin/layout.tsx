@@ -99,7 +99,7 @@ export default function AdminLayout({
       <div className="lg:hidden flex items-center justify-between bg-primary text-white px-5 py-4 w-full shadow-md z-30">
         <Link href="/" className="text-lg font-bold tracking-tight flex items-center gap-1.5">
           <span className="w-2 h-5 bg-accent rounded-full transform -rotate-12 inline-block"></span>
-          <span>Lendora<span className="font-light text-slate-300">Admin</span></span>
+          <span>NATURELLE<span className="font-light text-slate-300">Admin</span></span>
         </Link>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -117,7 +117,7 @@ export default function AdminLayout({
         <div className="mb-10 hidden lg:flex items-center justify-between">
           <Link href="/" className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
             <span className="w-2.5 h-6 bg-accent rounded-full transform -rotate-12 inline-block"></span>
-            <span>Lendora<span className="text-accent font-light">Admin</span></span>
+            <span>NATURELLE<span className="text-accent font-light">Admin</span></span>
           </Link>
         </div>
 
@@ -152,7 +152,7 @@ export default function AdminLayout({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold truncate leading-none">{user.name}</p>
-              <span className="text-[9px] text-slate-400">Alexander Wright</span>
+              <span className="text-[9px] text-slate-400 truncate block w-32">{user.email}</span>
             </div>
           </div>
 
@@ -186,7 +186,7 @@ export default function AdminLayout({
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs font-semibold text-slate-500">Alexander Wright | Owner</span>
+            <span className="text-xs font-semibold text-slate-500">{user.name} | Administrator</span>
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
           </div>
         </header>

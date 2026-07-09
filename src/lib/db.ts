@@ -354,6 +354,9 @@ export const db = {
   async getCustomers(): Promise<any[]> {
     if (supabase) {
       const { data, error } = await supabase.from('users').select('*').eq('role', 'customer');
+      if (error) {
+        console.error("db.getCustomers Query Error:", error);
+      }
       if (!error && data) return data;
     }
     const users = getLocal<any[]>(KEYS.USERS, []);

@@ -119,7 +119,7 @@ export default function AdminCustomers() {
 
                       {/* LTV */}
                       <td className="py-3.5 px-3 text-right font-extrabold text-primary">
-                        ${stats.totalSpent}
+                        ₹{stats.totalSpent}
                       </td>
 
                     </tr>

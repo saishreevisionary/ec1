@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, X, FolderKanban, Check, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, FolderKanban, Check, Info, Upload } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Product, Category } from '@/lib/seedData';
 
@@ -25,6 +25,17 @@ export default function AdminProductManagement() {
   const [imageUrl, setImageUrl] = useState('');
   const [galleryUrls, setGalleryUrls] = useState(''); // Textarea split by comma
   const [description, setDescription] = useState('');
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -199,8 +210,8 @@ export default function AdminProductManagement() {
                       </td>
                       <td className="py-3.5 px-3 font-semibold text-slate-700">{p.sku}</td>
                       <td className="py-3.5 px-3 capitalize">{categoryName}</td>
-                      <td className="py-3.5 px-3 font-bold text-primary">${p.price}</td>
-                      <td className="py-3.5 px-3">18% (${Math.round(p.price * 0.18)})</td>
+                      <td className="py-3.5 px-3 font-bold text-primary">₹{p.price}</td>
+                      <td className="py-3.5 px-3">18% (₹{Math.round(p.price * 0.18)})</td>
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-1.5 font-semibold">
                           <span className={`w-1.5 h-1.5 rounded-full ${
@@ -287,7 +298,7 @@ export default function AdminProductManagement() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold uppercase text-primary mb-1">Base Price ($)</label>
+                  <label className="block text-[9px] font-bold uppercase text-primary mb-1">Base Price (₹)</label>
                   <input
                     type="number"
                     required
@@ -328,15 +339,42 @@ export default function AdminProductManagement() {
 
               <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold uppercase text-primary mb-1">Primary Display Image URL</label>
-                  <input
-                    type="url"
-                    required
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                    placeholder="https://images.unsplash.com/..."
-                  />
+                  <label className="block text-[9px] font-bold uppercase text-primary mb-1">Primary Display Image</label>
+                  <div className="space-y-2.5">
+                    {/* File Upload Trigger */}
+                    <div className="border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-xl p-3 bg-slate-50/50 flex flex-col items-center justify-center text-center cursor-pointer relative transition-all">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                      <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                      <span className="text-[10px] font-bold text-primary">Click to select product image</span>
+                      <span className="text-[8px] text-slate-400">Supports PNG, JPG, WebP</span>
+                    </div>
+
+                    {/* Manual URL Input */}
+                    <input
+                      type="text"
+                      required
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                      placeholder="Or paste product image URL..."
+                    />
+
+                    {/* Preview Thumbnail */}
+                    {imageUrl && (
+                      <div className="flex items-center gap-2.5 p-2 bg-white border border-slate-150 rounded-xl">
+                        <img src={imageUrl} alt="Product preview" className="w-12 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-wide">Image Loaded</p>
+                          <p className="text-[9px] text-slate-400 font-mono truncate">{imageUrl.startsWith('data:') ? 'Base64 Encoded Image Data' : imageUrl}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

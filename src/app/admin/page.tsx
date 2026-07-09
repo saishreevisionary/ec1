@@ -102,7 +102,7 @@ export default function AdminDashboardOverview() {
         <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Revenue</span>
-            <span className="text-2xl font-extrabold text-primary block">${stats.revenue}</span>
+            <span className="text-2xl font-extrabold text-primary block">₹{stats.revenue}</span>
           </div>
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
             <DollarSign className="w-5 h-5" />
@@ -174,7 +174,7 @@ export default function AdminDashboardOverview() {
                   <div className="w-full relative flex flex-col justify-end h-32">
                     {/* Tooltip on hover */}
                     <span className="absolute bottom-[105%] left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                      ${Math.round(m.val)}
+                      ₹{Math.round(m.val)}
                     </span>
                     <div 
                       style={{ height: `${pct}%` }}
@@ -259,7 +259,7 @@ export default function AdminDashboardOverview() {
                       <td className="py-3.5 px-3 font-semibold text-primary">#{ord.id.substring(0, 8).toUpperCase()}</td>
                       <td className="py-3.5 px-3">{ord.shipping_name}</td>
                       <td className="py-3.5 px-3">{new Date(ord.created_at).toLocaleDateString()}</td>
-                      <td className="py-3.5 px-3 font-bold text-primary">${ord.grand_total}</td>
+                      <td className="py-3.5 px-3 font-bold text-primary">₹{ord.grand_total}</td>
                       <td className="py-3.5 px-3">
                         {ord.payment_screenshot_url ? (
                           <a 

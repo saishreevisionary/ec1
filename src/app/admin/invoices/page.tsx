@@ -81,8 +81,8 @@ export default function AdminInvoices() {
                       <td className="py-3.5 px-3 font-semibold text-primary">{inv.invoice_number.toUpperCase()}</td>
                       <td className="py-3.5 px-3 font-medium text-slate-500">Order #{order.id.substring(0, 8).toUpperCase()}</td>
                       <td className="py-3.5 px-3 font-semibold text-primary">{order.shipping_name}</td>
-                      <td className="py-3.5 px-3 font-medium text-slate-600">${order.subtotal}</td>
-                      <td className="py-3.5 px-3 font-extrabold text-primary">${order.grand_total}</td>
+                      <td className="py-3.5 px-3 font-medium text-slate-600">₹{order.subtotal}</td>
+                      <td className="py-3.5 px-3 font-extrabold text-primary">₹{order.grand_total}</td>
                       <td className="py-3.5 px-3 text-right">
                         <button
                           onClick={() => setActiveInvoice(inv)}
@@ -133,9 +133,8 @@ export default function AdminInvoices() {
               {/* Header block */}
               <div className="flex justify-between items-start border-b border-slate-200 pb-6 gap-6">
                 <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight text-primary">LendoraStore</h2>
-                  <p className="text-xs text-slate-400 font-light mt-1">One Infinite Loop, Cupertino, CA 95014</p>
-                  <p className="text-xs text-slate-400 font-light">experience@lendorastore.com | +1 (800) 854-8290</p>
+                  <h2 className="text-2xl font-extrabold tracking-tight text-primary font-serif">NATURELLE</h2>
+                  <p className="text-xs text-slate-400 font-light mt-1">botanicals@lendorastore.com | +1 (800) 854-8290</p>
                 </div>
                 <div className="text-right">
                   <h3 className="text-xl font-bold uppercase tracking-wide text-primary">GST TAX INVOICE</h3>
@@ -156,9 +155,9 @@ export default function AdminInvoices() {
                 </div>
                 <div>
                   <h4 className="font-bold text-primary uppercase tracking-wider mb-2">Merchant Registration:</h4>
-                  <p className="font-semibold text-primary">LendoraStore Premium Ltd</p>
+                  <p className="font-semibold text-primary">NATURELLE HAIR CARE Premium Ltd</p>
                   <p className="text-slate-500 mt-1">GSTIN: <span className="font-semibold text-slate-700">07AAAAA1111A1Z1</span></p>
-                  <p className="text-slate-500">Corporate Office: Cupertino CA, USA</p>
+                  <p className="text-slate-500">Corporate Office: New Delhi, India</p>
                   <p className="text-slate-400 mt-1">Transaction Ref: Direct UPI Settlement</p>
                 </div>
               </div>
@@ -183,9 +182,9 @@ export default function AdminInvoices() {
                         <tr key={idx} className="border-b border-slate-100">
                           <td className="py-3.5 font-semibold text-primary">{item.products?.name || 'Curated Product'}</td>
                           <td className="py-3.5 text-center">{item.quantity}</td>
-                          <td className="py-3.5 text-right">${item.price_at_purchase}</td>
+                          <td className="py-3.5 text-right">₹{item.price_at_purchase}</td>
                           <td className="py-3.5 text-right">{rate}%</td>
-                          <td className="py-3.5 text-right font-semibold text-primary">${lineBase}</td>
+                          <td className="py-3.5 text-right font-semibold text-primary">₹{lineBase}</td>
                         </tr>
                       );
                     })}
@@ -198,11 +197,11 @@ export default function AdminInvoices() {
                 <div className="w-64 space-y-2.5">
                   <div className="flex justify-between">
                     <span>Taxable Subtotal</span>
-                    <span className="font-semibold text-primary">${activeInvoice.orders.subtotal}</span>
+                    <span className="font-semibold text-primary">₹{activeInvoice.orders.subtotal}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>IGST Tax (18%)</span>
-                    <span className="font-semibold text-primary">${activeInvoice.orders.gst_amount}</span>
+                    <span className="font-semibold text-primary">₹{activeInvoice.orders.gst_amount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Expedited Freight</span>
@@ -210,13 +209,13 @@ export default function AdminInvoices() {
                   </div>
                   <div className="border-t border-slate-200 pt-3.5 flex justify-between text-sm font-extrabold text-primary">
                     <span>Grand Total Paid</span>
-                    <span>${activeInvoice.orders.grand_total}</span>
+                    <span>₹{activeInvoice.orders.grand_total}</span>
                   </div>
                 </div>
               </div>
 
               <div className="mt-16 text-center text-[10px] text-slate-400 font-light border-t border-slate-100 pt-4 leading-relaxed">
-                This is a computer-generated GST Tax Invoice. No signature required. Thank you for scanning & shopping with LendoraStore.
+                This is a computer-generated GST Tax Invoice. No signature required. Thank you for scanning & shopping with NATURELLE.
               </div>
 
             </div>
