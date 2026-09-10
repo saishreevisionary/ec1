@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, ArrowRight, Leaf } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useWishlist } from '@/context/WishlistContext';
@@ -12,9 +12,21 @@ export default function WishlistPage() {
   const { wishlist, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
 
-  const handleMoveToCart = (product: any) => {
+  const handleMoveToCart = (product: any, e: React.MouseEvent) => {
     addToCart(product, 1);
     removeFromWishlist(product.id);
+    
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cart-item-fly', {
+          detail: {
+            imageUrl: product.image_url,
+            startX: e.clientX,
+            startY: e.clientY
+          }
+        })
+      );
+    }
   };
 
   return (
@@ -30,28 +42,99 @@ export default function WishlistPage() {
         </div>
 
         <div className="border-b border-slate-100 pb-6 mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Saved Hardware</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Saved Wishlist</h1>
           <p className="text-xs text-slate-500 font-light mt-1">
             Review and manage items you've bookmarked for later.
           </p>
         </div>
 
         {wishlist.length === 0 ? (
-          /* Empty State */
-          <div className="text-center py-20 bg-slate-50 border border-dashed border-slate-200 rounded-3xl max-w-xl mx-auto my-8 px-6">
-            <span className="inline-block p-4 rounded-full bg-white border border-slate-100 shadow-sm text-slate-400 mb-4">
-              <Heart className="w-8 h-8" />
-            </span>
-            <h3 className="text-lg font-bold text-primary">Your Wishlist is Empty</h3>
-            <p className="text-sm text-slate-400 font-light mt-1.5 max-w-sm mx-auto">
+          /* Empty State with custom heartbeat and leaf impact animation */
+          <div className="text-center py-16 bg-[#FAF9F5]/40 border border-slate-200/80 rounded-3xl max-w-xl mx-auto my-8 px-6 relative overflow-hidden shadow-sm flex flex-col items-center justify-center min-h-[380px]">
+            <style>{`
+              @keyframes leaf-flutter-wishlist {
+                0% { transform: translateY(-50px) translateX(0) rotate(0deg); opacity: 0; }
+                10% { opacity: 1; }
+                40% { transform: translateY(0px) translateX(-15px) rotate(-35deg); }
+                70% { transform: translateY(40px) translateX(15px) rotate(35deg); }
+                82% { transform: translateY(68px) translateX(0px) rotate(5deg); opacity: 1; }
+                95%, 100% { transform: translateY(68px) translateX(0px) rotate(0deg); opacity: 0; }
+              }
+              @keyframes heart-beat {
+                0%, 78% { transform: scale(1); }
+                80% { transform: scale(1.18); }
+                82% { transform: scale(0.95); }
+                84% { transform: scale(1.12); }
+                88%, 100% { transform: scale(1); }
+              }
+              @keyframes ring-expand-wishlist {
+                0%, 78% { transform: scale(0.5); opacity: 0; }
+                82% { opacity: 0.6; }
+                95%, 100% { transform: scale(1.6); opacity: 0; }
+              }
+              @keyframes float-gentle-wishlist {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+              }
+              @keyframes sparkle-drift-1 {
+                0%, 78% { transform: translate(0, 0) scale(0); opacity: 0; }
+                82% { opacity: 1; transform: translate(-30px, -25px) scale(1); }
+                100% { opacity: 0; transform: translate(-45px, -50px) scale(0.5); }
+              }
+              @keyframes sparkle-drift-2 {
+                0%, 78% { transform: translate(0, 0) scale(0); opacity: 0; }
+                82% { opacity: 1; transform: translate(30px, -20px) scale(1); }
+                100% { opacity: 0; transform: translate(45px, -45px) scale(0.5); }
+              }
+              .animate-leaf-wishlist {
+                animation: leaf-flutter-wishlist 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+              }
+              .animate-heart {
+                animation: heart-beat 5s ease-in-out infinite;
+              }
+              .animate-ripple-wishlist {
+                animation: ring-expand-wishlist 5s ease-out infinite;
+                border: 1px solid rgba(181, 140, 84, 0.4);
+              }
+              .animate-float-wishlist {
+                animation: float-gentle-wishlist 4s ease-in-out infinite;
+              }
+            `}</style>
+
+            {/* Animation Scene */}
+            <div className="relative w-36 h-36 flex items-center justify-center mb-6 select-none">
+              
+              {/* Leaf falling from top */}
+              <div className="absolute top-0 w-8 h-8 text-[#b58c54] animate-leaf-wishlist z-20 pointer-events-none">
+                <Leaf className="w-full h-full fill-accent/10" />
+              </div>
+
+              {/* Sparkle particles floating on impact */}
+              <div className="absolute w-2 h-2 bg-[#b58c54] rounded-full" style={{ top: '60px', animation: 'sparkle-drift-1 5s ease-out infinite' }}></div>
+              <div className="absolute w-1.5 h-1.5 bg-[#b58c54] rounded-full" style={{ top: '64px', animation: 'sparkle-drift-2 5s ease-out infinite' }}></div>
+
+              {/* Ripple expanding on impact */}
+              <div className="absolute w-16 h-16 rounded-full animate-ripple-wishlist z-0 pointer-events-none" style={{ top: '64px' }}></div>
+
+              {/* Floating & Bouncing Heart Container */}
+              <div className="animate-float-wishlist z-10">
+                <div className="animate-heart p-4 rounded-full bg-white border border-slate-200/80 shadow-md text-pink-500 flex items-center justify-center relative w-18 h-18">
+                  <Heart className="w-8 h-8 fill-pink-500 text-pink-500" />
+                </div>
+              </div>
+
+            </div>
+
+            <h3 className="text-xl font-serif font-bold text-primary tracking-tight">Your Wishlist is Empty</h3>
+            <p className="text-xs text-slate-400 font-light mt-2 max-w-xs mx-auto leading-relaxed">
               Save your favorite items here to track stock availability, check back for price changes, or quickly purchase them later.
             </p>
             <Link
               href="/products"
-              className="mt-6 inline-flex items-center gap-1.5 px-6 py-2.5 bg-primary text-white hover:bg-primary-light rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm active:scale-95"
+              className="group mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-[#20352c] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer"
             >
               <span>Explore Products</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform duration-300" />
             </Link>
           </div>
         ) : (
@@ -121,7 +204,7 @@ export default function WishlistPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleMoveToCart(product)}
+                        onClick={(e) => handleMoveToCart(product, e)}
                         className="w-full py-2 bg-accent hover:bg-accent-light text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />

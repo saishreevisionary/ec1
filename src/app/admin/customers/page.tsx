@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Users, Mail, Phone, Calendar, DollarSign, ShoppingCart } from 'lucide-react';
 import { db } from '@/lib/db';
+import HairOilLoader from '@/components/HairOilLoader';
 
 export default function AdminCustomers() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -42,7 +43,7 @@ export default function AdminCustomers() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <HairOilLoader size="sm" />
       </div>
     );
   }

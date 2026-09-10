@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Heart, ShoppingBag, User, LogOut, Menu, X, ArrowRight } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, LogOut, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff, Leaf, CheckCircle2, Beaker, Sun } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -11,7 +11,7 @@ import { useWishlist } from '@/context/WishlistContext';
 const NavbarContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, logout, login, loginWithGoogle } = useAuth();
+  const { user, logout, login, loginWithGoogle, register } = useAuth();
   const { totalItems } = useCart();
   const { wishlist } = useWishlist();
 
@@ -19,14 +19,44 @@ const NavbarContent = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
-  const [loginRole, setLoginRole] = useState<'customer' | 'admin'>('customer');
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Custom states for redesigned premium login/register split-layout UI
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [cartImpact, setCartImpact] = useState(false);
+  const [wishlistImpact, setWishlistImpact] = useState(false);
 
   // Sync search input with URL search params
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) setSearchQuery(q);
   }, [searchParams]);
+
+  useEffect(() => {
+    const handleCartImpact = () => {
+      setCartImpact(true);
+      const timer = setTimeout(() => setCartImpact(false), 450);
+      return () => clearTimeout(timer);
+    };
+
+    window.addEventListener('cart-impact', handleCartImpact);
+    return () => window.removeEventListener('cart-impact', handleCartImpact);
+  }, []);
+
+  useEffect(() => {
+    const handleWishlistImpact = () => {
+      setWishlistImpact(true);
+      const timer = setTimeout(() => setWishlistImpact(false), 450);
+      return () => clearTimeout(timer);
+    };
+
+    window.addEventListener('wishlist-impact', handleWishlistImpact);
+    return () => window.removeEventListener('wishlist-impact', handleWishlistImpact);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,127 +67,156 @@ const NavbarContent = () => {
     }
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail.trim()) {
       setErrorMsg('Please enter an email.');
       return;
     }
-    login(loginEmail.trim(), loginRole);
-    setIsLoginModalOpen(false);
-    setLoginEmail('');
-    setErrorMsg('');
-    router.refresh();
+    
+    try {
+      if (isRegisterMode) {
+        if (!fullName.trim()) {
+          setErrorMsg('Please enter your name.');
+          return;
+        }
+        await register(loginEmail.trim(), fullName.trim());
+      } else {
+        await login(loginEmail.trim());
+      }
+      
+      setLoginSuccess(true);
+      
+      // Delay closing modal to show success visual
+      setTimeout(() => {
+        setIsLoginModalOpen(false);
+        setLoginSuccess(false);
+        setLoginEmail('');
+        setFullName('');
+        setPassword('');
+        setErrorMsg('');
+        router.refresh();
+      }, 4000);
+      
+    } catch (err: any) {
+      setErrorMsg(err.message || 'An error occurred during authentication.');
+    }
   };
 
   return (
     <>
       {/* TOP ANNOUNCEMENT BAR */}
-      <div className="bg-primary text-white text-[10px] sm:text-xs py-2 px-4 sm:px-8 flex justify-between items-center tracking-wider font-light">
-        <div>Free Shipping on orders above ₹999</div>
+      <div className="bg-[#1F452C] text-[#B5D3BC] text-[10px] sm:text-xs py-2 px-4 sm:px-8 flex justify-between items-center tracking-wider font-light">
+        <div>Venuss Herbo Aromatics — Natural Botanical Extracts & Essential Oils</div>
         <div className="flex gap-4">
-          <Link href="/dashboard" className="hover:text-accent transition-colors">Track Order</Link>
+          <Link href="/contact" className="hover:text-[#D4954B] transition-colors">sales@venuss.co.in</Link>
           <span className="opacity-40">|</span>
-          <Link href="/products" className="hover:text-accent transition-colors">Help & Support</Link>
+          <Link href="/contact" className="hover:text-[#D4954B] transition-colors">+91 4563 244154</Link>
         </div>
       </div>
 
-      <header className="sticky top-0 z-50 glassmorphism w-full">
+      <header className="sticky top-0 z-50 bg-[#F5F2E9]/98 backdrop-blur-md w-full border-b border-[#2E5E3E]/10 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 gap-4">
+          <div className="flex items-center justify-between h-18 gap-6">
             
-            {/* Logo (Serif Naturelle Style) */}
+            {/* Logo (Venuss Herbo Aromatics Leaf Emblem) */}
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="flex flex-col items-start leading-none group">
-                <span className="text-xl sm:text-2xl font-black tracking-widest text-primary font-serif">NATURELLE</span>
-                <span className="text-[9px] font-bold text-accent uppercase tracking-widest mt-0.5">Hair Care</span>
+              <Link id="tour-logo" href="/" className="flex items-center gap-2.5 group">
+                <div className="w-9 h-9 rounded-full bg-[#2E5E3E] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                  <Leaf className="w-4.5 h-4.5 text-white" />
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-base sm:text-lg font-bold tracking-wider text-[#2E5E3E] font-serif uppercase">
+                    VENUSS
+                  </span>
+                  <span className="text-[8px] font-bold text-[#8C8678] uppercase tracking-widest">
+                    HERBO AROMATICS
+                  </span>
+                </div>
               </Link>
             </div>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex space-x-6 text-sm font-medium">
-              <Link href="/" className="text-slate-600 hover:text-primary transition-colors">Home</Link>
-              <Link href="/products" className="text-slate-600 hover:text-primary transition-colors">Shop</Link>
-              <Link href="/products" className="text-slate-600 hover:text-primary transition-colors">Categories</Link>
-              <Link href="/#bestsellers" className="text-slate-600 hover:text-primary transition-colors">Best Sellers</Link>
-              <Link href="/products" className="text-slate-600 hover:text-primary transition-colors">About Us</Link>
-              <Link href="/products" className="text-slate-600 hover:text-primary transition-colors">Contact</Link>
+            {/* Simple Clean Desktop Navigation Links */}
+            <nav id="tour-categories" className="hidden md:flex space-x-8 text-xs font-bold tracking-wider uppercase">
+              <Link href="/" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Home</Link>
+              <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Shop</Link>
+              <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Categories</Link>
+              <Link href="/about" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">About</Link>
+              <Link href="/contact" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Contact</Link>
             </nav>
 
-            {/* Search Bar (Rounded-lg, dark green button on right) */}
-            <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-grow max-w-xs xl:max-w-sm relative border border-slate-250 rounded-lg overflow-hidden bg-white shadow-sm">
-              <input
-                type="text"
-                placeholder="Search for hair oils, serums..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 text-xs font-light focus:outline-none placeholder:text-slate-400 text-primary"
-              />
-              <button type="submit" className="bg-primary hover:bg-primary-light text-white px-3.5 transition-colors flex items-center justify-center">
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
-
-            {/* User Interaction Actions */}
-            <div className="flex items-center space-x-4 sm:space-x-6">
+            {/* Search & Action Icons */}
+            <div className="flex items-center space-x-4 sm:space-x-5">
               
-              {/* Wishlist Button (Labeled) */}
-              <Link href="/wishlist" className="hidden sm:flex items-center gap-1.5 text-slate-600 hover:text-primary transition-colors text-xs font-semibold relative">
+              {/* Search Bar */}
+              <form id="tour-search" onSubmit={handleSearchSubmit} className="hidden sm:flex relative border border-[#2E5E3E]/20 rounded-full overflow-hidden bg-white shadow-xs">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-32 lg:w-40 px-3.5 py-1 text-xs font-light focus:outline-none placeholder:text-slate-400 text-[#2E5E3E]"
+                />
+                <button type="submit" className="bg-[#2E5E3E] hover:bg-[#1F452C] text-white px-2.5 transition-colors flex items-center justify-center">
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              </form>
+
+              {/* Wishlist Icon */}
+              <Link 
+                id="tour-wishlist" 
+                href="/wishlist" 
+                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1"
+                title="Wishlist"
+              >
                 <div className="relative">
-                  <Heart className="w-5 h-5 text-primary" />
+                  <Heart className={`w-5 h-5 ${wishlistImpact ? 'fill-[#D4954B] text-[#D4954B]' : ''}`} />
                   {wishlist.length > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-accent text-[9px] font-bold text-white flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[9px] font-bold text-white flex items-center justify-center rounded-full">
                       {wishlist.length}
                     </span>
                   )}
                 </div>
-                <span>Wishlist</span>
               </Link>
 
-              {/* My Account (Labeled) */}
-              <div className="flex items-center gap-2">
+              {/* Account Button */}
+              <div id="tour-account" className="flex items-center">
                 {user ? (
-                  <>
-                    <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center gap-1.5 text-slate-600 hover:text-primary transition-colors text-xs font-semibold">
-                      <User className="w-5 h-5 text-primary" />
-                      <span className="max-w-[70px] truncate">My Account</span>
-                    </Link>
-                    <button 
-                      onClick={() => { logout(); router.push('/'); }} 
-                      className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors hidden sm:inline-block"
-                      title="Sign Out"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                    </button>
-                  </>
+                  <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-colors p-1" title="Account">
+                    <User className="w-5 h-5 text-[#2E5E3E]" />
+                  </Link>
                 ) : (
                   <button 
                     onClick={() => setIsLoginModalOpen(true)} 
-                    className="flex items-center gap-1.5 text-slate-600 hover:text-primary transition-colors text-xs font-semibold focus:outline-none"
+                    className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-colors p-1 focus:outline-none"
+                    title="Account"
                   >
-                    <User className="w-5 h-5 text-primary" />
-                    <span>My Account</span>
+                    <User className="w-5 h-5 text-[#2E5E3E]" />
                   </button>
                 )}
               </div>
 
-              {/* Cart Button (Labeled) */}
-              <Link href="/cart" className="flex items-center gap-1.5 text-slate-600 hover:text-primary transition-colors text-xs font-semibold relative">
+              {/* Cart Button */}
+              <Link 
+                id="tour-cart" 
+                href="/cart" 
+                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1"
+                title="Cart"
+              >
                 <div className="relative">
-                  <ShoppingBag className="w-5 h-5 text-primary" />
+                  <ShoppingBag className="w-5 h-5 text-[#2E5E3E]" />
                   {totalItems > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-accent text-[9px] font-bold text-white flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[9px] font-bold text-white flex items-center justify-center rounded-full">
                       {totalItems}
                     </span>
                   )}
                 </div>
-                <span>Cart</span>
               </Link>
 
               {/* Mobile Menu Icon */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-1 text-slate-600 hover:text-primary transition-colors"
+                className="md:hidden p-1 text-[#2E5E3E] hover:text-[#D4954B] transition-colors"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -169,7 +228,7 @@ const NavbarContent = () => {
 
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-100 bg-white/95 backdrop-blur-lg px-4 pt-3 pb-6 space-y-4 animate-fade-in">
+          <div className="md:hidden border-t border-[#2E5E3E]/10 bg-[#F5F2E9]/98 backdrop-blur-lg px-4 pt-3 pb-6 space-y-4 animate-fade-in">
             {/* Search (Mobile) */}
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
@@ -177,17 +236,16 @@ const NavbarContent = () => {
                 placeholder="Search catalog..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#2E5E3E]/20 rounded-full text-sm focus:outline-none text-[#2E5E3E]"
               />
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
             </form>
-            <div className="flex flex-col space-y-3 font-medium text-slate-700">
-              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Shop All</Link>
-              <Link href="/products?category=botanical-oils" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Botanical Oils</Link>
-              <Link href="/products?category=active-serums" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Active Serums</Link>
-              <Link href="/products?category=hair-mists" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Hair Mists</Link>
-              <Link href="/products?category=scalp-therapy" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Scalp Therapy</Link>
-              <Link href="/products?category=treatment-sets" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary py-1">Treatment Sets</Link>
+            <div className="flex flex-col space-y-2.5 font-bold text-xs uppercase tracking-wider text-[#2E5E3E]">
+              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Home</Link>
+              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Shop</Link>
+              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Categories</Link>
+              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">About</Link>
+              <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1">Contact</Link>
             </div>
           </div>
         )}
@@ -200,120 +258,334 @@ const NavbarContent = () => {
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsLoginModalOpen(false)}></div>
           
           {/* Modal Container */}
-          <div className="bg-[#FAF9F5] rounded-2xl w-full max-w-md p-8 relative z-10 shadow-2xl border border-slate-200/55 animate-slide-up">
-            <button
-              onClick={() => setIsLoginModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center mb-6">
-              <span className="text-2xl mb-1 block">🌿</span>
-              <h2 className="text-2xl font-black text-primary tracking-tight font-serif">Access NATURELLE</h2>
-              <p className="text-xs text-slate-400 mt-1">Experience botanical care at its absolute pinnacle</p>
-            </div>
-
-            {/* Google Sign-In Button */}
-            <button
-              type="button"
-              onClick={async () => {
-                await loginWithGoogle();
-                setIsLoginModalOpen(false);
-              }}
-              className="w-full py-2.5 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50/80 rounded-xl text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-2.5 mb-5 cursor-pointer shadow-sm active:scale-[0.98]"
-            >
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-
-            {/* Separator */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-slate-200"></div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Or credentials login</span>
-              <div className="flex-1 h-px bg-slate-200"></div>
-            </div>
-
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400"
-                  required
-                />
+          {/* Modal Container */}
+          <div className="bg-[#FAF9F5] rounded-3xl w-full max-w-4xl overflow-hidden relative z-10 shadow-2xl border border-slate-200/55 animate-slide-up flex flex-col md:flex-row min-h-[580px]">
+            
+            {/* Left Side: Brand Visual (Desktop only) */}
+            <div className="hidden md:flex md:w-1/2 relative bg-slate-900 overflow-hidden flex-col justify-between p-10 text-white">
+              {/* Background Image with botanical bottle */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center opacity-85 mix-blend-luminosity hover:opacity-100 transition-opacity duration-700" 
+                style={{ backgroundImage: "url('/login-bg.png')" }}
+              ></div>
+              {/* Soft overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/70 via-slate-900/40 to-transparent"></div>
+              
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-300 flex items-center gap-1">
+                  <Leaf className="w-3.5 h-3.5" /> Nourish. Care. Shine.
+                </span>
+                <h2 className="text-3xl font-serif font-semibold mt-4 leading-tight tracking-tight max-w-xs">
+                  Stronger Roots, <br />
+                  <span className="text-emerald-300">Beautiful You.</span>
+                </h2>
+                <p className="text-xs text-slate-300 font-light mt-3 leading-relaxed max-w-xs">
+                  Premium hair care solutions made with nature's finest ingredients.
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
-                  Account Type
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setLoginRole('customer')}
-                    className={`py-2 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                      loginRole === 'customer'
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    Customer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoginRole('admin')}
-                    className={`py-2 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                      loginRole === 'admin'
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    Administrator
-                  </button>
+              {/* Bottom Proposition Columns */}
+              <div className="grid grid-cols-3 gap-3 relative z-10 border-t border-white/10 pt-6 mt-8">
+                <div className="flex flex-col items-start text-left">
+                  <Leaf className="w-5 h-5 text-emerald-300 mb-2" />
+                  <span className="text-[10px] font-bold text-white leading-tight">100% Natural</span>
+                  <span className="text-[9px] text-slate-300 font-light">Ingredients</span>
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-300 mb-2" />
+                  <span className="text-[10px] font-bold text-white leading-tight">Clinically</span>
+                  <span className="text-[9px] text-slate-300 font-light">Tested</span>
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <Beaker className="w-5 h-5 text-emerald-300 mb-2" />
+                  <span className="text-[10px] font-bold text-white leading-tight">Safe &</span>
+                  <span className="text-[9px] text-slate-300 font-light">Effective</span>
                 </div>
               </div>
+            </div>
 
-              {errorMsg && (
-                <p className="text-xs text-red-500 font-medium">{errorMsg}</p>
+            {/* Right Side: Form Content */}
+            <div className="w-full md:w-1/2 p-8 sm:p-10 flex flex-col justify-between relative bg-white min-h-[580px]">
+              {loginSuccess ? (
+                /* Success Animation inside the Right Panel (Checkmark & Sparkle Burst) */
+                <div className="flex-1 flex flex-col items-center justify-center p-4 text-center select-none my-auto relative overflow-hidden animate-[fade-in-up_0.6s_ease-out_forwards]">
+                  <style>{`
+                    @keyframes scale-up {
+                      0% { transform: scale(0); opacity: 0; }
+                      100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes draw-check {
+                      0% { transform: scale(0); opacity: 0; }
+                      70% { transform: scale(1.2); opacity: 1; }
+                      100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes fade-in-up {
+                      0% { transform: translateY(15px); opacity: 0; }
+                      100% { transform: translateY(0); opacity: 1; }
+                    }
+                    @keyframes ring-out {
+                      0% { transform: scale(0.6); opacity: 0.8; }
+                      100% { transform: scale(1.4); opacity: 0; border-width: 1px; }
+                    }
+                    @keyframes particle-burst-1 {
+                      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+                      100% { transform: translate(-45px, -55px) scale(0.5); opacity: 0; }
+                    }
+                    @keyframes particle-burst-2 {
+                      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+                      100% { transform: translate(50px, -40px) scale(0.5); opacity: 0; }
+                    }
+                    @keyframes particle-burst-3 {
+                      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+                      100% { transform: translate(-35px, 50px) scale(0.5); opacity: 0; }
+                    }
+                    @keyframes particle-burst-4 {
+                      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+                      100% { transform: translate(40px, 55px) scale(0.5); opacity: 0; }
+                    }
+                    @keyframes shimmer-loader {
+                      0% { width: 0%; }
+                      100% { width: 100%; }
+                    }
+                    .success-ring {
+                      border: 2px solid rgba(45, 74, 62, 0.25);
+                      animation: ring-out 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) 0.3s forwards;
+                    }
+                  `}</style>
+                  
+                  <div className="relative w-28 h-28 flex items-center justify-center mb-6">
+                    {/* Animated ripple rings */}
+                    <div className="absolute inset-0 rounded-full success-ring"></div>
+                    <div className="absolute inset-2 rounded-full success-ring" style={{ animationDelay: '0.2s' }}></div>
+                    
+                    {/* Burst sparkles (gold circles) */}
+                    <div className="absolute w-2 h-2 bg-[#b58c54] rounded-full blur-[0.5px]" style={{ animation: 'particle-burst-1 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.5s forwards' }}></div>
+                    <div className="absolute w-2.5 h-2.5 bg-[#b58c54] rounded-full blur-[0.5px]" style={{ animation: 'particle-burst-2 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.5s forwards' }}></div>
+                    <div className="absolute w-1.5 h-1.5 bg-[#b58c54] rounded-full blur-[0.5px]" style={{ animation: 'particle-burst-3 1.4s cubic-bezier(0.25, 1, 0.5, 1) 0.5s forwards' }}></div>
+                    <div className="absolute w-2 h-2 bg-[#b58c54] rounded-full blur-[0.5px]" style={{ animation: 'particle-burst-4 1.3s cubic-bezier(0.25, 1, 0.5, 1) 0.5s forwards' }}></div>
+
+                    {/* Highly-reliable animated checkmark */}
+                    <div 
+                      className="w-18 h-18 bg-[#2d4a3e] rounded-full flex items-center justify-center shadow-md relative z-10 animate-[scale-up_0.5s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
+                    >
+                      <CheckCircle2 
+                        className="w-10 h-10 text-white animate-[draw-check_0.5s_ease-out_0.4s_forwards]" 
+                        style={{ transform: 'scale(0)', opacity: 0 }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-w-xs">
+                    <span 
+                      className="text-[10px] font-bold text-emerald-800 tracking-widest uppercase block animate-[fade-in-up_0.5s_ease-out_0.8s_forwards]" 
+                      style={{ opacity: 0 }}
+                    >
+                      🌿 You're In!
+                    </span>
+                    <h4 
+                      className="text-xl font-serif text-primary font-bold animate-[fade-in-up_0.5s_ease-out_1.0s_forwards]" 
+                      style={{ opacity: 0 }}
+                    >
+                      Login Successful!
+                    </h4>
+                    <p 
+                      className="text-xs text-slate-400 font-light leading-relaxed animate-[fade-in-up_0.5s_ease-out_1.2s_forwards]" 
+                      style={{ opacity: 0 }}
+                    >
+                      Let's make your hair goals a reality.
+                    </p>
+                  </div>
+
+                  {/* Bottom progress bar loader */}
+                  <div 
+                    className="relative w-28 h-0.5 bg-slate-100 rounded-full overflow-hidden mt-8 animate-[fade-in-up_0.5s_ease-out_1.3s_forwards]" 
+                    style={{ opacity: 0 }}
+                  >
+                    <div 
+                      className="absolute inset-y-0 left-0 bg-[#2d4a3e] rounded-full animate-[shimmer-loader_2.5s_linear_forwards]" 
+                    ></div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setIsLoginModalOpen(false)}
+                    className="absolute top-5 right-5 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors z-20"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  {/* Theme Toggle Indicator */}
+                  <div className="absolute top-5 right-14 print:hidden">
+                    <div className="p-2 border border-slate-150 rounded-full text-slate-400 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <Sun className="w-4 h-4 text-slate-600" />
+                    </div>
+                  </div>
+
+                  {/* Form Container */}
+                  <div className="my-auto">
+                    <div className="mb-6">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                        🌿 {isRegisterMode ? 'Welcome' : 'Welcome Back'}
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl font-black text-primary tracking-tight font-serif mt-1">
+                        {isRegisterMode ? 'Create Account' : 'Welcome Back!'}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1.5 font-light">
+                        {isRegisterMode ? 'Sign up to start saving your profile' : 'Sign in to continue to your account'}
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleLoginSubmit} className="space-y-4">
+                      {isRegisterMode && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5">
+                            Full Name
+                          </label>
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Your full name"
+                              value={fullName}
+                              onChange={(e) => setFullName(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 bg-slate-50/50"
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5">
+                          Email Address
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type="email"
+                            placeholder="name@example.com"
+                            value={loginEmail}
+                            onChange={(e) => setLoginEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 bg-slate-50/50"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 bg-slate-50/50"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {!isRegisterMode && (
+                        <div className="flex justify-end">
+                          <button 
+                            type="button" 
+                            onClick={() => alert("Please use magic links or Google login for secure instant access.")}
+                            className="text-[10px] font-bold text-primary hover:underline"
+                          >
+                            Forgot Password?
+                          </button>
+                        </div>
+                      )}
+
+                      {errorMsg && (
+                        <p className="text-xs text-red-500 font-medium">{errorMsg}</p>
+                      )}
+
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          className="group w-full py-3 bg-[#2d4a3e] hover:bg-[#20352c] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-xl hover:shadow-[#2d4a3e]/15 flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+                        >
+                          <span>{isRegisterMode ? 'Sign Up' : 'Sign In'}</span>
+                          <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform duration-300" />
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Separator */}
+                    <div className="flex items-center gap-3 my-5">
+                      <div className="flex-1 h-px bg-slate-200"></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Or continue with</span>
+                      <div className="flex-1 h-px bg-slate-200"></div>
+                    </div>
+
+                    {/* Social Login Button */}
+                    <div className="mb-6">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await loginWithGoogle();
+                          setLoginSuccess(true);
+                          setTimeout(() => {
+                            setIsLoginModalOpen(false);
+                            setLoginSuccess(false);
+                            router.push('/dashboard?tab=profile&promptPassword=true');
+                          }, 4000);
+                        }}
+                        className="group w-full py-2.5 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50/70 rounded-xl text-xs font-semibold text-slate-700 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0 transform group-hover:scale-110 group-hover:rotate-[15deg] transition-all duration-300" viewBox="0 0 24 24">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
+                          />
+                        </svg>
+                        <span>Continue with Google</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer Switcher */}
+                  <div className="text-center pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegisterMode(!isRegisterMode);
+                        setErrorMsg('');
+                      }}
+                      className="text-xs font-semibold text-emerald-800 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>{isRegisterMode ? 'Already have an account? Sign in' : 'New here? Create an account'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                </>
               )}
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-accent text-white hover:bg-accent-light rounded-xl text-sm font-semibold shadow-lg hover:shadow-accent/20 active:scale-[0.98] transition-all"
-                >
-                  Continue
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-6 border-t border-slate-100 pt-4 text-center">
-              <p className="text-xs text-slate-400">
-                Quick testing tip: Enter <span className="font-semibold text-slate-600">admin@lendorastore.com</span> to test the Admin Panel instantly.
-              </p>
             </div>
           </div>
         </div>

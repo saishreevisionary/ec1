@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Product } from '@/lib/seedData';
+import HairOilLoader from '@/components/HairOilLoader';
 
 export default function AdminDashboardOverview() {
   const [stats, setStats] = useState({
@@ -87,7 +88,7 @@ export default function AdminDashboardOverview() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <HairOilLoader size="sm" />
       </div>
     );
   }

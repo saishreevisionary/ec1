@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Check, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Heart, Check, Star, Zap } from 'lucide-react';
 import { Product } from '@/lib/seedData';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -12,6 +13,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const router = useRouter();
   const { addToCart, cart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
@@ -23,6 +25,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!isFavorite && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('wishlist-item-fly', {
+          detail: {
+            imageUrl: product.image_url,
+            startX: e.clientX,
+            startY: e.clientY
+          }
+        })
+      );
+    }
     toggleWishlist(product);
   };
 
@@ -30,6 +44,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product, 1);
+    
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cart-item-fly', {
+          detail: {
+            imageUrl: product.image_url,
+            startX: e.clientX,
+            startY: e.clientY
+          }
+        })
+      );
+    }
+  };
+
+  const handleBuyNowClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1);
+    router.push('/checkout');
   };
 
   return (
@@ -44,10 +77,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             loading="lazy"
           />
           
-          {/* Badge Layouts (Mockup style) */}
+          {/* Badge Layouts */}
           {product.badge && (
             <div className="absolute top-3 left-3 z-10">
-              <span className="bg-primary text-white text-[9px] font-bold tracking-wider uppercase py-0.5 px-2 rounded-sm shadow-sm">
+              <span className="bg-[#2E5E3E] text-white text-[9px] font-bold tracking-wider uppercase py-0.5 px-2 rounded-sm shadow-sm">
                 {product.badge}
               </span>
             </div>
@@ -79,12 +112,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Product Info details */}
         <div className="p-4 flex flex-col flex-1">
           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-            {product.category_id === 1 ? 'Hair Oils' :
-             product.category_id === 2 ? 'Hair Serums' :
-             product.category_id === 3 ? 'Onion Range' :
-             product.category_id === 4 ? 'Rosemary Range' :
-             product.category_id === 5 ? 'Amla Range' :
-             product.category_id === 6 ? 'Bhringraj Range' : 'Combos'}
+            {product.category_id === 1 ? 'Essential Oils' :
+             product.category_id === 2 ? 'Spice Oils' :
+             product.category_id === 3 ? 'Spice Oleoresins' :
+             product.category_id === 4 ? 'Floral Concretes' :
+             product.category_id === 5 ? 'Floral Absolutes' :
+             product.category_id === 6 ? 'Spice Powders' : 'Extracts'}
           </span>
           <h3 className="text-xs sm:text-sm font-semibold text-primary group-hover:text-accent transition-colors line-clamp-2 leading-snug mb-1">
             {product.name}
@@ -108,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Price details with slashed original */}
           <div className="mt-auto pt-2 flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
-              <span className="text-sm sm:text-base font-extrabold text-primary">
+              <span className="text-sm sm:text-base font-extrabold text-[#2E5E3E]">
                 ₹{product.price}
               </span>
               {product.original_price && (
@@ -124,35 +157,45 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </Link>
 
-      {/* Flat Action Button Row */}
-      <div className="px-4 pb-4 pt-0 mt-auto flex gap-2 w-full">
+      {/* Action Button Row with ADD TO CART + BUY NOW + WISHLIST */}
+      <div className="px-4 pb-4 pt-0 mt-auto flex gap-1.5 w-full">
         {isOutOfStock ? (
           <button
             disabled
-            className="flex-grow py-2 bg-slate-100 text-slate-400 cursor-not-allowed rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors"
+            className="flex-grow py-2 bg-slate-100 text-slate-400 cursor-not-allowed rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
           >
             Sold Out
           </button>
-        ) : inCartQty > 0 ? (
-          <button
-            onClick={handleAddToCartClick}
-            className="flex-grow py-2 bg-primary text-white rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all shadow-sm active:scale-[0.98]"
-          >
-            <Check className="w-3 h-3 text-accent" />
-            <span>Added ({inCartQty})</span>
-          </button>
         ) : (
-          <button
-            onClick={handleAddToCartClick}
-            className="flex-grow py-2 bg-primary hover:bg-primary-light text-white rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center justify-center transition-all shadow-sm active:scale-[0.98]"
-          >
-            <span>Add to Cart</span>
-          </button>
+          <>
+            <button
+              onClick={handleAddToCartClick}
+              className="flex-1 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all shadow-xs active:scale-[0.98]"
+              title="Add to Cart"
+            >
+              {inCartQty > 0 ? (
+                <>
+                  <Check className="w-3 h-3 text-[#D4954B]" />
+                  <span>Added ({inCartQty})</span>
+                </>
+              ) : (
+                <span>Add Cart</span>
+              )}
+            </button>
+
+            <button
+              onClick={handleBuyNowClick}
+              className="flex-1 py-2 bg-[#D48B38] hover:bg-[#BF7A2C] text-white rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all shadow-xs active:scale-[0.98]"
+              title="Buy Now (Direct Checkout)"
+            >
+              <span>Buy Now</span>
+            </button>
+          </>
         )}
 
         <button
           onClick={handleWishlistClick}
-          className={`p-2 rounded-md border text-slate-500 hover:text-red-500 active:scale-95 transition-all flex items-center justify-center ${
+          className={`p-2 rounded-lg border text-slate-500 hover:text-red-500 active:scale-95 transition-all flex items-center justify-center ${
             isFavorite ? 'border-red-200 bg-red-50 text-red-500' : 'border-slate-200 bg-white hover:bg-slate-50'
           }`}
           title="Toggle Wishlist"

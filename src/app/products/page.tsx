@@ -6,6 +6,7 @@ import { Filter, SlidersHorizontal, ArrowUpDown, X, Grid, Search } from 'lucide-
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import HairOilLoader from '@/components/HairOilLoader';
 import { db } from '@/lib/db';
 import { Product, Category } from '@/lib/seedData';
 
@@ -256,10 +257,8 @@ function ProductListingContent() {
           {/* 2. PRODUCT GRID (Desktop: 3 Cols, Mobile: 2 Cols) */}
           <div className="lg:col-span-3">
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 animate-pulse py-12">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="aspect-square bg-slate-100 rounded-2xl"></div>
-                ))}
+              <div className="flex justify-center items-center py-24">
+                <HairOilLoader size="md" />
               </div>
             ) : filteredProducts.length === 0 ? (
               /* Empty State */

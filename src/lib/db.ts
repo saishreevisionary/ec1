@@ -14,6 +14,19 @@ export const supabase = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
+export interface Review {
+  id: string;
+  product_id: string;
+  product_name: string;
+  user_name: string;
+  user_email: string;
+  rating: number; // 1-5
+  title: string;
+  comment: string;
+  status: 'approved' | 'pending' | 'rejected';
+  created_at: string;
+}
+
 // Local Storage keys
 const KEYS = {
   PRODUCTS: 'lendorastore_products',
@@ -24,7 +37,8 @@ const KEYS = {
   INVOICES: 'lendorastore_invoices',
   SETTINGS: 'lendorastore_settings',
   USERS: 'lendorastore_users',
-  SESSION: 'lendorastore_session'
+  SESSION: 'lendorastore_session',
+  REVIEWS: 'lendorastore_reviews'
 };
 
 // Initialize localStorage DB if empty
@@ -40,10 +54,10 @@ const initLocalDb = () => {
   if (!localStorage.getItem(KEYS.SETTINGS)) {
     const defaultSettings = [
       { key: 'gst_settings', value: { rate: 18, enabled: true } },
-      { key: 'qr_settings', value: { company_name: "LendoraStore Premium Ltd", upi_id: "lendorastore@upi", instructions: "Please open any UPI enabled payment app (Google Pay, PhonePe, Paytm, or your banking application). Scan the QR code, verify the amount matches your order grand total, and submit the payment. After completion, take a screenshot of the successful transaction and upload it below to verify your order." } },
-      { key: 'contact_settings', value: { email: "experience@lendorastore.com", phone: "+1 (800) 854-8290", address: "One Infinite Loop, Cupertino, CA 95014, USA" } },
-      { key: 'logo_settings', value: { text: "LendoraStore", url: "" } },
-      { key: 'banner_settings', value: { title: "The New Era of Simplicity", subtitle: "Meticulously designed tools for premium sound, refined workspaces, and active living. Built for those who appreciate absolute detail.", cta_text: "Shop the Collection", bg_gradient: "from-slate-900 via-indigo-950 to-slate-900" } }
+      { key: 'qr_settings', value: { company_name: "Venuss Herbo Aromatics Ltd", upi_id: "venussherbo@upi", instructions: "Please open any UPI enabled payment app (Google Pay, PhonePe, Paytm, or your banking application). Scan the QR code, verify the amount matches your order grand total, and submit the payment. After completion, take a screenshot of the successful transaction and upload it below to verify your order." } },
+      { key: 'contact_settings', value: { email: "sales@venuss.co.in", phone: "+91 94432 12345", address: "Venuss Herbo Aromatics, Tamil Nadu, India" } },
+      { key: 'logo_settings', value: { text: "VENUSS HERBO AROMATICS", url: "" } },
+      { key: 'banner_settings', value: { title: "Pure Essential Oils & Herbal Extracts", subtitle: "Meticulously extracted from nature for wellness, aromatherapy, and industrial applications.", cta_text: "Shop the Collection", bg_gradient: "from-emerald-900 via-teal-950 to-slate-900" } }
     ];
     defaultSettings.forEach(s => {
       localStorage.setItem(`${KEYS.SETTINGS}_${s.key}`, JSON.stringify(s.value));
@@ -52,10 +66,63 @@ const initLocalDb = () => {
   if (!localStorage.getItem(KEYS.USERS)) {
     // Default admin user
     const defaultUsers = [
-      { id: 'admin-uuid', email: 'admin@lendorastore.com', name: 'Alexander Wright', role: 'admin', created_at: new Date().toISOString() },
-      { id: 'customer-uuid', email: 'customer@lendorastore.com', name: 'Sarah Connor', role: 'customer', created_at: new Date().toISOString() }
+      { id: 'admin-uuid', email: 'admin@venuss.co.in', name: 'Alexander Wright', role: 'admin', created_at: new Date().toISOString() },
+      { id: 'customer-uuid', email: 'customer@venuss.co.in', name: 'Sarah Connor', role: 'customer', created_at: new Date().toISOString() }
     ];
     localStorage.setItem(KEYS.USERS, JSON.stringify(defaultUsers));
+  }
+  if (!localStorage.getItem(KEYS.REVIEWS)) {
+    const sampleReviews: Review[] = [
+      {
+        id: 'rev-1',
+        product_id: '1',
+        product_name: 'Betel Leaf Oil',
+        user_name: 'Ananya Sharma',
+        user_email: 'ananya@example.com',
+        rating: 5,
+        title: 'Exceptional Purity and Aroma',
+        comment: 'The scent of this Betel Leaf Oil is incredibly rich and authentic. High essential oil concentration makes it a standout product in my collection!',
+        status: 'approved',
+        created_at: new Date(Date.now() - 86400000 * 3).toISOString()
+      },
+      {
+        id: 'rev-2',
+        product_id: '1',
+        product_name: 'Betel Leaf Oil',
+        user_name: 'Rajesh K.',
+        user_email: 'rajesh@example.com',
+        rating: 5,
+        title: 'Top Quality Herbal Essential Oil',
+        comment: 'Very pleased with the packaging and purity. Venuss Herbo Aromatics delivers as always!',
+        status: 'approved',
+        created_at: new Date(Date.now() - 86400000 * 7).toISOString()
+      },
+      {
+        id: 'rev-3',
+        product_id: '2',
+        product_name: 'Cardamom Essential Oil',
+        user_name: 'Priya Nair',
+        user_email: 'priya@example.com',
+        rating: 4,
+        title: 'Soothing and Refreshing',
+        comment: 'Wonderful aroma, perfect for aromatherapy. Would recommend bottled seal improvement.',
+        status: 'approved',
+        created_at: new Date(Date.now() - 86400000 * 5).toISOString()
+      },
+      {
+        id: 'rev-4',
+        product_id: '1',
+        product_name: 'Betel Leaf Oil',
+        user_name: 'Vikram Singh',
+        user_email: 'vikram@example.com',
+        rating: 4,
+        title: 'Good product overall',
+        comment: 'Prompt delivery and authentic scent.',
+        status: 'pending',
+        created_at: new Date(Date.now() - 3600000 * 4).toISOString()
+      }
+    ];
+    localStorage.setItem(KEYS.REVIEWS, JSON.stringify(sampleReviews));
   }
 };
 
@@ -411,16 +478,17 @@ export const db = {
     return getLocal<any | null>(KEYS.SESSION, null);
   },
 
-  login(email: string, role: 'admin' | 'customer' = 'customer'): any {
+  login(email: string, role?: 'admin' | 'customer'): any {
     const users = getLocal<any[]>(KEYS.USERS, []);
     let user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
+      const determinedRole = role || (email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer');
       user = {
-        id: role === 'admin' ? 'admin-uuid' : crypto.randomUUID(),
+        id: determinedRole === 'admin' ? 'admin-uuid' : crypto.randomUUID(),
         email: email,
         name: email.split('@')[0].toUpperCase(),
-        role: role,
+        role: determinedRole,
         created_at: new Date().toISOString()
       };
       users.push(user);
@@ -442,16 +510,109 @@ export const db = {
     const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (exists) return exists;
 
+    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
+
     const newUser = {
       id: crypto.randomUUID(),
       email,
       name,
-      role: 'customer',
+      role: determinedRole,
       created_at: new Date().toISOString()
     };
     users.push(newUser);
     setLocal(KEYS.USERS, users);
     setLocal(KEYS.SESSION, newUser);
     return newUser;
+  },
+
+  // --- REVIEWS ---
+  async getReviews(productId?: string, statusFilter?: string): Promise<Review[]> {
+    if (supabase) {
+      let query = supabase.from('reviews').select('*').order('created_at', { ascending: false });
+      if (productId) {
+        query = query.eq('product_id', productId);
+      }
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      const { data, error } = await query;
+      if (!error && data) return data as Review[];
+    }
+    let reviews = getLocal<Review[]>(KEYS.REVIEWS, []);
+    if (productId) {
+      reviews = reviews.filter(r => r.product_id === productId);
+    }
+    if (statusFilter && statusFilter !== 'all') {
+      reviews = reviews.filter(r => r.status === statusFilter);
+    }
+    return reviews.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  },
+
+  async saveReview(review: Omit<Review, 'id' | 'created_at' | 'status'> & { id?: string; status?: 'approved' | 'pending' | 'rejected' }): Promise<Review> {
+    const newReview: Review = {
+      id: review.id || crypto.randomUUID(),
+      product_id: review.product_id,
+      product_name: review.product_name,
+      user_name: review.user_name,
+      user_email: review.user_email,
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+      status: review.status || 'approved',
+      created_at: new Date().toISOString()
+    };
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('reviews').upsert(newReview).select().single();
+        if (!error && data) return data as Review;
+      } catch (err) {
+        console.warn("Supabase save review failed, using local", err);
+      }
+    }
+
+    const reviews = getLocal<Review[]>(KEYS.REVIEWS, []);
+    const idx = reviews.findIndex(r => r.id === newReview.id);
+    if (idx !== -1) {
+      reviews[idx] = newReview;
+    } else {
+      reviews.unshift(newReview);
+    }
+    setLocal(KEYS.REVIEWS, reviews);
+    return newReview;
+  },
+
+  async updateReviewStatus(id: string, status: 'approved' | 'pending' | 'rejected'): Promise<Review | null> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('reviews').update({ status }).eq('id', id).select().single();
+        if (!error && data) return data as Review;
+      } catch (err) {
+        console.warn("Supabase update review status failed, fallback to local", err);
+      }
+    }
+    const reviews = getLocal<Review[]>(KEYS.REVIEWS, []);
+    const idx = reviews.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      reviews[idx].status = status;
+      setLocal(KEYS.REVIEWS, reviews);
+      return reviews[idx];
+    }
+    return null;
+  },
+
+  async deleteReview(id: string): Promise<boolean> {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('reviews').delete().eq('id', id);
+        if (!error) return true;
+      } catch (err) {
+        console.warn("Supabase delete review failed, fallback to local", err);
+      }
+    }
+    const reviews = getLocal<Review[]>(KEYS.REVIEWS, []);
+    const filtered = reviews.filter(r => r.id !== id);
+    setLocal(KEYS.REVIEWS, filtered);
+    return true;
   }
 };

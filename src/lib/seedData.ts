@@ -35,52 +35,45 @@ export interface Category {
 export const CATEGORIES: Category[] = [
   {
     id: 1,
-    name: 'Hair Oils',
-    slug: 'hair-oils',
-    description: 'Nourish & Strengthen',
+    name: 'Essential Oils',
+    slug: 'essential-oils',
+    description: 'Pure Botanical Distillates',
     image_url: 'https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=200&auto=format&fit=crop'
   },
   {
     id: 2,
-    name: 'Hair Serums',
-    slug: 'hair-serums',
-    description: 'Smooth & Shine',
+    name: 'Spice Oils',
+    slug: 'spice-oils',
+    description: 'Aromatic Spice Extracts',
     image_url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=200&auto=format&fit=crop'
   },
   {
     id: 3,
-    name: 'Onion Range',
-    slug: 'onion-range',
-    description: 'Hair Fall Control',
+    name: 'Spice Oleoresins',
+    slug: 'spice-oleoresins',
+    description: 'Concentrated Flavor Resins',
     image_url: 'https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?q=80&w=200&auto=format&fit=crop'
   },
   {
     id: 4,
-    name: 'Rosemary Range',
-    slug: 'rosemary-range',
-    description: 'Growth & Density',
+    name: 'Floral Concretes',
+    slug: 'floral-concretes',
+    description: 'Natural Flower Waxes',
     image_url: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=200&auto=format&fit=crop'
   },
   {
     id: 5,
-    name: 'Amla Range',
-    slug: 'amla-range',
-    description: 'Nourishment',
+    name: 'Floral Absolutes',
+    slug: 'floral-absolutes',
+    description: 'Precious Fine Fragrances',
     image_url: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=200&auto=format&fit=crop'
   },
   {
     id: 6,
-    name: 'Bhringraj Range',
-    slug: 'bhringraj-range',
-    description: 'Repair & Restore',
+    name: 'Spice Powders',
+    slug: 'spice-powders',
+    description: 'Ground Sterilized Spices',
     image_url: 'https://images.unsplash.com/photo-1615396879814-490192568c37?q=80&w=200&auto=format&fit=crop'
-  },
-  {
-    id: 7,
-    name: 'Combos',
-    slug: 'combos',
-    description: 'Best Value Deals',
-    image_url: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=200&auto=format&fit=crop'
   }
 ];
 
@@ -91,15 +84,15 @@ const generateProducts = (): Product[] => {
   // Seed the exact first 6 products shown in the mockup:
   const firstSixProducts: Omit<Product, 'id' | 'created_at'>[] = [
     {
-      name: "Rosemary Hair Growth Oil",
-      slug: "rosemary-hair-growth-oil",
-      sku: "ROS-001",
-      price: 549,
-      original_price: 699,
+      name: "Cardamom Oil (Pure Steam Distilled)",
+      slug: "cardamom-oil-pure-steam-distilled",
+      sku: "ESS-001",
+      price: 1850,
+      original_price: 2100,
       rating: 5,
-      reviews_count: 125,
+      reviews_count: 142,
       badge: "Bestseller",
-      category_id: 4,
+      category_id: 1,
       image_url: "https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop",
@@ -109,25 +102,24 @@ const generateProducts = (): Product[] => {
       low_stock_threshold: 5,
       gst_rate: 18,
       status: "active",
-      description: "Infused with pure cold-pressed rosemary leaf extracts, bhringraj, and amla, our Rosemary Hair Growth Oil actively nourishes the scalp ecosystem, strengthens roots, and triggers follicle density. A lightweight, non-sticky herbal formula suited for daily density boosting.",
+      description: "Extracted from premium Malabar green cardamom pods, our Cardamom Oil offers warm, spicy-sweet notes used in high-end fragrances, flavor houses, and pharmaceutical formulations worldwide.",
       specs: {
-        "Key Actives": "Rosemary Extract, Bhringraj, Amla",
-        "Base Oils": "Cold-pressed Sesame & Argan lipids",
-        "Texture": "Lightweight, quick-absorbing scalp oil",
-        "Aromatic Profile": "Fresh herbal, rosemary leaf & mint",
-        "Ideal For": "Hair thinning, follicle activation, scalp dry flaking",
-        "Directions": "Massage 5 drops onto scalp pre-wash, or leave overnight."
+        "Botanical Name": "Elettaria cardamomum",
+        "Extraction Method": "Steam Distillation",
+        "Origin": "Western Ghats, India",
+        "Aroma": "Warm, spicy, balsamic sweet",
+        "Purity": "100% Pure & Undiluted"
       }
     },
     {
-      name: "Hair Serum - Silk & Shine",
-      slug: "hair-serum-silk-shine",
-      sku: "SER-001",
-      price: 599,
+      name: "Black Pepper Oleoresin 40/20",
+      slug: "black-pepper-oleoresin-40-20",
+      sku: "OLE-001",
+      price: 1450,
       rating: 5,
       reviews_count: 98,
-      badge: "New",
-      category_id: 2,
+      badge: "Export Quality",
+      category_id: 3,
       image_url: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop",
@@ -137,79 +129,76 @@ const generateProducts = (): Product[] => {
       low_stock_threshold: 5,
       gst_rate: 18,
       status: "active",
-      description: "A molecular-level bond-building smoothing fluid. Hair Serum Silk & Shine seals damaged cuticles, controls static frizz, and gives an instant glossy sheen. Formulated with hydrolyzed keratin proteins and wheat germ oils.",
+      description: "Supercritical fluid extracted black pepper oleoresin containing high piperine content, ideal for seasoning blends, meat processing, and savory flavorings.",
       specs: {
-        "Key Actives": "Hydrolyzed Keratin, Wheat Germ Lipids",
-        "Texture": "Smooth fluid serum, zero weight",
-        "Scent Family": "Fresh bergamot & white blossoms",
-        "Benefits": "Thermal screen up to 230°C, instant anti-frizz shine",
-        "Directions": "Apply 2 pumps to damp lengths before styling."
+        "Active Piperine": "40% min",
+        "Volatile Oil": "20% v/w",
+        "Solubility": "Oil & Alcohol Soluble",
+        "Application": "Food, Beverage & Seasonings"
       }
     },
     {
-      name: "Onion Hair Oil",
-      slug: "onion-hair-oil-1",
-      sku: "ONI-001",
-      price: 509,
-      original_price: 699,
+      name: "Jasmine Grandiflorum Concrete",
+      slug: "jasmine-grandiflorum-concrete",
+      sku: "FLO-001",
+      price: 3200,
+      original_price: 3800,
       rating: 5,
       reviews_count: 215,
       discount: "-15%",
-      category_id: 3,
+      category_id: 4,
       image_url: "https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?q=80&w=600&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop"
       ],
-      stock_quantity: 8,
-      low_stock_threshold: 5,
+      stock_quantity: 12,
+      low_stock_threshold: 3,
       gst_rate: 18,
       status: "active",
-      description: "Rich in sulfur, potassium, and antioxidants, our Onion Hair Oil actively reduces breakage, anchors root fibers, and controls hair fall. Balanced with black seed oil and vitamin E for cuticle structural reinforcement.",
+      description: "Hand-picked fresh night-blooming jasmine flowers processed immediately to yield a deeply floral, rich wax concrete essential for luxury perfumes.",
       specs: {
-        "Key Actives": "Red Onion Extract, Black Seed Oil, Vitamin E",
-        "Base Oils": "Pure cold-pressed coconut & sweet almond oil",
-        "Texture": "Rich nourishing oil",
-        "Scent Profile": "Deodorized sweet lavender & tea tree blend",
-        "Key Benefit": "Breaks hair fall loops, boosts hair shaft elasticity",
-        "Directions": "Apply to roots twice weekly pre-wash."
+        "Flower Type": "Jasmine Grandiflorum",
+        "Physical State": "Waxy solid paste",
+        "Color": "Deep orange to brown",
+        "Industry": "Fine Fragrance & Perfumery"
       }
     },
     {
-      name: "Onion Hair Oil (Premium)",
-      slug: "onion-hair-oil-premium",
-      sku: "ONI-002",
-      price: 499,
+      name: "Tuberose Floral Absolute",
+      slug: "tuberose-floral-absolute",
+      sku: "ABS-001",
+      price: 4500,
       rating: 5,
       reviews_count: 176,
       badge: "Bestseller",
-      category_id: 3,
+      category_id: 5,
       image_url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=600&auto=format&fit=crop"
       ],
-      stock_quantity: 2,
-      low_stock_threshold: 3,
+      stock_quantity: 8,
+      low_stock_threshold: 2,
       gst_rate: 18,
       status: "active",
-      description: "An advanced, high-potency edition of our signature red onion formulation. Enriched with botanical extracts of curry leaves and ginger root to stimulate follicle blood flow and accelerate density recovery.",
+      description: "Extremely precious floral absolute with rich, creamy white-floral intoxication. Highly prized in elite international perfumery.",
       specs: {
-        "Key Actives": "Onion VPA, Ginger Extract, Curry Leaves",
-        "Aromatic Profile": "Ginger & tea tree leaves",
-        "Benefit": "Anti-hair fall and scalp clarify",
-        "Volume": "200 mL"
+        "Botanical Source": "Polianthes tuberosa",
+        "Grade": "100% Pure Perfumery Absolute",
+        "Appearance": "Viscous reddish-brown liquid",
+        "Scent Profile": "Narcotic floral, honeyed undertones"
       }
     },
     {
-      name: "Bhringraj Hair Oil",
-      slug: "bhringraj-hair-oil",
-      sku: "BHR-001",
-      price: 549,
+      name: "Ginger Oil (Fresh Rhizome)",
+      slug: "ginger-oil-fresh-rhizome",
+      sku: "SPI-001",
+      price: 1250,
       rating: 5,
       reviews_count: 84,
-      badge: "New",
-      category_id: 6,
+      badge: "New Batch",
+      category_id: 2,
       image_url: "https://images.unsplash.com/photo-1615396879814-490192568c37?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1615396879814-490192568c37?q=80&w=600&auto=format&fit=crop",
@@ -219,41 +208,39 @@ const generateProducts = (): Product[] => {
       low_stock_threshold: 5,
       gst_rate: 18,
       status: "active",
-      description: "An ancient Ayurvedic preparation. Bhringraj Hair Oil, derived from the 'king of herbs', actively repairs damaged cuticles, restores split ends, and controls premature graying. It cools the scalp and delivers deep root nourishment.",
+      description: "Steam-distilled from freshly harvested ginger rhizomes. Delivers crisp, warm citrus-spicy notes for food, beverages, and aromatherapy.",
       specs: {
-        "Key Actives": "Bhringraj (False Daisy), Amla, Centella",
-        "Base Oils": "Cold-pressed black sesame oil",
-        "Texture": "Rich, cooling herbal oil",
-        "Scent Family": "Earthy botanical, cooling camphor",
-        "Key Benefit": "Repairs lengths, cools scalp, prevents premature graying"
+        "Botanical Name": "Zingiber officinale",
+        "Zingiberene Content": "35% min",
+        "Refractive Index": "1.488 - 1.494",
+        "Flavor Category": "Warm Spice & Zing"
       }
     },
     {
-      name: "Ultimate Hair Care Combo",
-      slug: "ultimate-hair-care-combo",
-      sku: "COM-001",
-      price: 1299,
-      original_price: 1699,
+      name: "Sterilized Turmeric Powder 5% Curcumin",
+      slug: "sterilized-turmeric-powder-5-curcumin",
+      sku: "POW-001",
+      price: 650,
+      original_price: 800,
       rating: 5,
       reviews_count: 312,
       badge: "Bestseller",
-      category_id: 7,
+      category_id: 6,
       image_url: "https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=600&auto=format&fit=crop",
       images: [
         "https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=600&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=600&auto=format&fit=crop"
+        "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"
       ],
-      stock_quantity: 15,
-      low_stock_threshold: 5,
+      stock_quantity: 100,
+      low_stock_threshold: 10,
       gst_rate: 18,
       status: "active",
-      description: "Our complete 3-step root stimulation and lengths repair program in one set. Features the Rosemary Growth Oil (30ml) to activate follicles, the Silk & Shine Serum (50ml) for length styling, and the red onion root tonic.",
+      description: "Steam sterilized ground turmeric powder guaranteed high curcumin content. Free of synthetic colors and pathogens.",
       specs: {
-        "Set Inclusions": "Rosemary Growth Oil (30ml), Silk Serum (50ml), Onion Oil (100ml)",
-        "Targets": "Complete root-to-tip styling, hair fall control & density recovery",
-        "Duration": "Approx. 45 days routine supply",
-        "Sustainability": "100% glass amber jars in recyclable kraft boxes"
+        "Curcumin Content": "5.0% min",
+        "Moisture": "< 10%",
+        "Sterilization": "Steam Sterilized (Zero ETO)",
+        "Mesh Size": "60 - 80 mesh"
       }
     }
   ];
@@ -275,97 +262,88 @@ const generateProducts = (): Product[] => {
 
   const categoryTemplates = [
     {
-      categoryId: 1, // Oils
-      prefix: ['Aura', 'Nourishing', 'Restoring', 'Saddle', 'Satin', 'Botanical', 'Herbal'],
-      nouns: ['Scalp Lipid', 'Renewal Oil', 'Hydrating Drops', 'Glossing Oil', 'Follicle Feed', 'Root Drop', 'Cuticle Elixir'],
-      suffixes: ['No. 02', 'Organic', 'Select', 'Premium', 'Active', 'Reserve', 'Duo'],
+      categoryId: 1, // Essential Oils
+      prefix: ['Pure', 'Organic', 'Steam-Distilled', 'Botanical', 'Natural', 'Wildharvested', 'Virgin'],
+      nouns: ['Eucalyptus Oil', 'Lemongrass Oil', 'Peppermint Oil', 'Lavender Oil', 'Tea Tree Oil', 'Cardamom Oil', 'Clove Oil'],
+      suffixes: ['Grade A', 'Pure', 'Extract', 'Premium', 'Export Quality', 'Select', 'Distillate'],
       images: oilImages,
       specs: {
-        'Main Infusion': 'Cold pressed herbal oils',
-        'Texture': 'Light non-greasy lipid drops',
-        'Aroma': 'Mandarin and Lavender extract'
+        'Purity': '100% Pure & Undiluted',
+        'Method': 'Steam Distillation',
+        'Industry': 'Flavor, Fragrance & Pharma'
       },
-      basePrice: 399,
-      priceVar: 150
+      basePrice: 1200,
+      priceVar: 400
     },
     {
-      categoryId: 2, // Serums
-      prefix: ['Peptide', 'Molecular', 'Cellular', 'Keratin', 'Silk', 'Restorative', 'Aero'],
-      nouns: ['Bond Builder', 'Follicle Serum', 'Density Booster', 'Shine Serum', 'Protective Fluid', 'Anti-Frizz Drops', 'Repair Drop'],
-      suffixes: ['Clinical', 'Max', 'Pro', 'Ultra', 'Duo', 'Formula', 'Fortified'],
+      categoryId: 2, // Spice Oils
+      prefix: ['Ceylon', 'Malabar', 'Coorg', 'Indian', 'Rich', 'Aromatic', 'Golden'],
+      nouns: ['Black Pepper Oil', 'Nutmeg Oil', 'Ginger Oil', 'Cinnamon Oil', 'Cumin Oil', 'Fennel Oil', 'Coriander Oil'],
+      suffixes: ['Extract', 'Oil', 'Essence', 'Distillate', 'Concentrate', 'Pure', 'Premium'],
       images: oilImages,
       specs: {
-        'Key Actives': 'Multi-peptides, Keratin lipids',
-        'pH Balance': '5.5 scalp friendly',
-        'Scent': 'Bergamot & Citrus leaf'
+        'Extraction': 'Steam Distilled Rhizomes & Seeds',
+        'Solubility': 'Alcohol & Oil Soluble',
+        'Application': 'Savory Flavors & Seasoning'
       },
-      basePrice: 499,
-      priceVar: 200
-    },
-    {
-      categoryId: 3, // Onion Range
-      prefix: ['Red Onion', 'Sulfur-Active', 'Root-Anchor', 'Black Seed', 'Breakage Control'],
-      nouns: ['Follicle Oil', 'Black Seed Tonic', 'Density Mist', 'Onion Hydrosol', 'Breakage Repair Fluid'],
-      suffixes: ['Clinical', 'Active', 'Organics', 'VPA', 'Drops'],
-      images: oilImages,
-      specs: {
-        'Active': 'Sulfur-rich red onion extract',
-        'Key Benefit': 'Locks hair bulb, stops hair fall'
-      },
-      basePrice: 349,
-      priceVar: 120
-    },
-    {
-      categoryId: 4, // Rosemary Range
-      prefix: ['Rosemary Leaf', 'Density Boost', 'Follicle Stimulating', 'Scalp Care', 'Herb-Active'],
-      nouns: ['Growth Drops', 'Scalp Tonic', 'Follicle Fluid', 'Density Booster', 'Mint Rosemary Oil'],
-      suffixes: ['Active', 'clinical', 'Max', 'Pro 5%', 'Organic'],
-      images: oilImages,
-      specs: {
-        'Active': 'Rosemary extract, tea tree oil',
-        'Benefit': 'Triggers bulb division, speeds growth'
-      },
-      basePrice: 449,
-      priceVar: 180
-    },
-    {
-      categoryId: 5, // Amla Range
-      prefix: ['Amla Gold', 'Vitamin C', 'Nourishing', 'Herbal', 'Fortified'],
-      nouns: ['Amla Oil', 'Nourish Elixir', 'Root Feed', 'Follicle Feed', 'Shine Drops'],
-      suffixes: ['Pure', 'Classic', 'Organic', 'Absolute', 'Active'],
-      images: oilImages,
-      specs: {
-        'Active': 'Pure gooseberry extracts (Amla)',
-        'Benefit': 'Nourishes lengths, strengthens fibers'
-      },
-      basePrice: 299,
-      priceVar: 100
-    },
-    {
-      categoryId: 6, // Bhringraj Range
-      prefix: ['Ayurvedic', 'Bhringraj Pure', 'False Daisy', 'Earthy', 'Root Renewal'],
-      nouns: ['Scalp Tonic', 'Exfoliant Oil', 'Darkening Oil', 'Scalp Clay', 'Renewal Drops'],
-      suffixes: ['Therapy', 'Tonic', 'Scrub', 'Toner', 'Extract'],
-      images: oilImages,
-      specs: {
-        'Active': 'Bhringraj leaves extract',
-        'Benefit': 'Restores damaged bonds, cools scalp'
-      },
-      basePrice: 429,
-      priceVar: 150
-    },
-    {
-      categoryId: 7, // Combos
-      prefix: ['Complete Routine', 'Discovery Trial', 'Total Density', 'Scalp Therapy', 'Starter Set'],
-      nouns: ['Bundle Routine', 'Trio Pack', 'Essentials Bag', 'Duo Pack', 'Restoration Kit'],
-      suffixes: ['Set', 'Routine', 'Trio', 'Kit', 'Bundle'],
-      images: oilImages,
-      specs: {
-        'Inclusions': 'Oils (50ml) + Serums (30ml)',
-        'Benefit': 'Complete structural restoration program'
-      },
-      basePrice: 999,
+      basePrice: 1400,
       priceVar: 500
+    },
+    {
+      categoryId: 3, // Spice Oleoresins
+      prefix: ['Supercritical', 'High-Potency', 'Concentrated', 'Standardized', 'Rich', 'Active', 'Soluble'],
+      nouns: ['Capsicum Oleoresin', 'Turmeric Oleoresin', 'Paprika Oleoresin', 'Ginger Oleoresin', 'Garlic Oleoresin', 'Cardamom Oleoresin', 'Pepper Oleoresin'],
+      suffixes: ['40/20', 'Extract', 'Liquid', 'Resin', 'Powder-Form', 'Standardized', 'Concentrate'],
+      images: oilImages,
+      specs: {
+        'Active Principle': 'High Potency Active Resins',
+        'Standardization': 'HPLC Verified',
+        'Application': 'Food Processing & Sauces'
+      },
+      basePrice: 1600,
+      priceVar: 600
+    },
+    {
+      categoryId: 4, // Floral Concretes
+      prefix: ['Fresh Bloom', 'Night Harvested', 'Grandiflorum', 'Sambac', 'Damask', 'Marigold', 'Lotus'],
+      nouns: ['Jasmine Concrete', 'Rose Concrete', 'Tuberose Concrete', 'Champaca Concrete', 'Mimosa Concrete', 'Frangipani Concrete', 'Pink Lotus Concrete'],
+      suffixes: ['Wax', 'Concrete', 'Paste', 'Perfumery Grade', 'Pure', 'Select', 'Essence'],
+      images: oilImages,
+      specs: {
+        'State': 'Natural Waxy Paste',
+        'Origin': 'South India Gardens',
+        'Industry': 'Perfumery & Fragrance'
+      },
+      basePrice: 2800,
+      priceVar: 800
+    },
+    {
+      categoryId: 5, // Floral Absolutes
+      prefix: ['Royal', 'Exquisite', 'Precious', 'Golden', 'Pure', 'Intense', 'Nectar'],
+      nouns: ['Jasmine Absolute', 'Rose Absolute', 'Tuberose Absolute', 'Lotus Absolute', 'Champaca Absolute', 'Orris Absolute', 'Carnation Absolute'],
+      suffixes: ['Absolute', 'Perfumery Pure', 'Nectar', 'Ultra-Fine', 'Grade 1', 'Extract', 'Essence'],
+      images: oilImages,
+      specs: {
+        'Purity': '100% Pure Floral Absolute',
+        'Scent': 'Deep Intoxicating Floral',
+        'Grade': 'Fine Fragrance & High Perfumery'
+      },
+      basePrice: 4200,
+      priceVar: 1200
+    },
+    {
+      categoryId: 6, // Spice Powders
+      prefix: ['Sterilized', 'Micro-Ground', 'Organic', 'Steam-Treated', 'Pure', 'Grade A', 'Select'],
+      nouns: ['Turmeric Powder', 'Chilli Powder', 'Ginger Powder', 'Coriander Powder', 'Cumin Powder', 'Black Pepper Powder', 'Garlic Powder'],
+      suffixes: ['5% Curcumin', '60 Mesh', 'Zero-ETO', 'Ground', 'Powder', 'Export Batch', 'Pure'],
+      images: oilImages,
+      specs: {
+        'Sterilization': 'Steam Sterilized (Zero ETO)',
+        'Mesh Size': '60-80 Mesh',
+        'Application': 'Culinary & Industrial Food Production'
+      },
+      basePrice: 500,
+      priceVar: 200
     }
   ];
 

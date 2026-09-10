@@ -3,18 +3,19 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { User, ShoppingBag, MapPin, Heart, Edit, Trash2, CheckCircle2, ChevronRight, Printer, RefreshCw, X, Check } from 'lucide-react';
+import { User, ShoppingBag, MapPin, Heart, Edit, Trash2, CheckCircle2, ChevronRight, Printer, RefreshCw, X, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { db } from '@/lib/db';
+import { db, supabase, isSupabaseConfigured } from '@/lib/db';
 
 function UserDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, register } = useAuth();
   const { wishlist, removeFromWishlist } = useWishlist();
+  const promptPassword = searchParams.get('promptPassword') === 'true';
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist'>('orders');
@@ -27,6 +28,14 @@ function UserDashboardContent() {
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [isProfileEditing, setIsProfileEditing] = useState(false);
+
+  // Password Update States
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // Address Modal States
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -111,6 +120,54 @@ function UserDashboardContent() {
       setIsProfileEditing(false);
       alert('Profile updated successfully.');
       router.refresh();
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          setPasswordError(error.message);
+          return;
+        }
+      } else {
+        // Local Storage mock authentication update
+        if (user) {
+          const users = JSON.parse(localStorage.getItem('lendorastore_users') || '[]');
+          const idx = users.findIndex((u: any) => u.id === user.id);
+          if (idx !== -1) {
+            users[idx].password = newPassword;
+            localStorage.setItem('lendorastore_users', JSON.stringify(users));
+          }
+
+          // Update active session object
+          const updatedUser = { ...user, password: newPassword };
+          localStorage.setItem('lendorastore_session', JSON.stringify(updatedUser));
+        }
+      }
+
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      // Autoclose success message or auto refresh
+      setTimeout(() => setPasswordSuccess(false), 5000);
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to update password.');
     }
   };
 
@@ -467,62 +524,166 @@ function UserDashboardContent() {
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div className="border-b border-slate-100 pb-4">
-                  <h2 className="text-lg font-bold text-primary">Profile Configuration</h2>
+                  <h2 className="text-lg font-bold text-primary font-serif">Profile Configuration</h2>
                 </div>
 
-                <form onSubmit={handleProfileSave} className="max-w-md bg-white border border-slate-200 p-6 rounded-2xl space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={profileName}
-                      disabled={!isProfileEditing}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                  
+                  {/* Left Column: Personal Information */}
+                  <form onSubmit={handleProfileSave} className="bg-white border border-slate-200/80 p-6 rounded-3xl space-y-4 shadow-sm">
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Personal Details</h3>
+                    <div>
+                      <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileName}
+                        disabled={!isProfileEditing}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={profileEmail}
-                      disabled
-                      className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm opacity-60 cursor-not-allowed"
-                    />
-                    <span className="text-[10px] text-slate-400 font-light block mt-1">To change email details, contact merchant help desk support.</span>
-                  </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={profileEmail}
+                        disabled
+                        className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm opacity-60 cursor-not-allowed"
+                      />
+                      <span className="text-[10px] text-slate-400 font-light block mt-1">To change email details, contact merchant help desk support.</span>
+                    </div>
 
-                  <div className="pt-2 flex justify-end gap-3">
-                    {isProfileEditing ? (
-                      <>
+                    <div className="pt-2 flex justify-end gap-3">
+                      {isProfileEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setIsProfileEditing(false)}
+                            className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2 bg-primary hover:bg-[#20352c] text-white rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors shadow-sm"
+                          >
+                            Save Changes
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => setIsProfileEditing(false)}
-                          className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-semibold uppercase tracking-wider"
+                          onClick={() => setIsProfileEditing(true)}
+                          className="px-5 py-2 border border-primary text-primary hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
                         >
-                          Cancel
+                          Edit Details
                         </button>
-                        <button
-                          type="submit"
-                          className="px-5 py-2 bg-primary hover:bg-primary-light text-white rounded-xl text-xs font-bold uppercase tracking-wider"
-                        >
-                          Save Changes
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsProfileEditing(true)}
-                        className="px-5 py-2 border border-primary text-primary hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider"
-                      >
-                        Edit Details
-                      </button>
+                      )}
+                    </div>
+                  </form>
+
+                  {/* Right Column: Account Security / Set Password */}
+                  <form 
+                    onSubmit={handlePasswordUpdate} 
+                    className={`bg-white border p-6 rounded-3xl space-y-4 shadow-sm transition-all duration-500 ${
+                      promptPassword 
+                        ? 'border-[#b58c54] animate-[pulse-gold_2.5s_infinite]' 
+                        : 'border-slate-200/80'
+                    }`}
+                  >
+                    <style>{`
+                      @keyframes pulse-gold {
+                        0%, 100% { border-color: rgba(181, 140, 84, 0.35); box-shadow: 0 0 0 rgba(181, 140, 84, 0); }
+                        50% { border-color: rgba(181, 140, 84, 0.95); box-shadow: 0 0 16px rgba(181, 140, 84, 0.3); }
+                      }
+                    `}</style>
+                    <h3 className="text-xs font-bold text-accent uppercase tracking-wider mb-2">🌿 Account Security</h3>
+                    
+                    {promptPassword && (
+                      <div className="p-3.5 bg-[#FAF9F5] border border-[#b58c54]/30 rounded-xl flex items-start gap-2.5 text-left animate-fade-in-up">
+                        <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[10px] font-bold text-accent uppercase tracking-wider">Configure Password</h4>
+                          <p className="text-[10px] text-slate-500 font-light mt-0.5 leading-relaxed">
+                            Please set a secure password so you can access your profile using your email on other devices.
+                          </p>
+                        </div>
+                      </div>
                     )}
-                  </div>
-                </form>
+
+                    <p className="text-[11px] text-slate-400 font-light leading-relaxed mb-4">
+                      If you signed in with Google or email magic links, you can set a password here to allow standard credentials login on other devices.
+                    </p>
+
+                    {passwordError && (
+                      <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-medium">
+                        {passwordError}
+                      </div>
+                    )}
+
+                    {passwordSuccess && (
+                      <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium">
+                        Password updated successfully!
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">New Password</label>
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          required
+                          value={newPassword}
+                          placeholder="At least 6 characters"
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Confirm New Password</label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          required
+                          value={confirmPassword}
+                          placeholder="Re-type new password"
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-primary hover:bg-[#20352c] text-white rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors shadow-sm active:scale-95"
+                      >
+                        Set Password
+                      </button>
+                    </div>
+
+                  </form>
+
+                </div>
               </div>
             )}
 

@@ -4,6 +4,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
 import { ToastProvider } from '@/context/ToastContext';
+import GuidedTour from '@/components/GuidedTour';
+import CartFlightManager from '@/components/CartFlightManager';
 
 export const metadata: Metadata = {
   title: 'LendoraStore | Premium Curated Living',
@@ -23,6 +25,8 @@ export default function RootLayout({
             <CartProvider>
               <WishlistProvider>
                 {children}
+                <GuidedTour />
+                <CartFlightManager />
               </WishlistProvider>
             </CartProvider>
           </AuthProvider>

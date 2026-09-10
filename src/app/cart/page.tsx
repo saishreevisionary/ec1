@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShoppingCart, ShieldCheck, Leaf } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/context/CartContext';
@@ -30,21 +30,78 @@ export default function CartPage() {
         </div>
 
         {cart.length === 0 ? (
-          /* Empty State */
-          <div className="text-center py-20 bg-slate-50 border border-dashed border-slate-200 rounded-3xl max-w-xl mx-auto my-8 px-6">
-            <span className="inline-block p-4 rounded-full bg-white border border-slate-100 shadow-sm text-slate-400 mb-4">
-              <ShoppingBag className="w-8 h-8" />
-            </span>
-            <h3 className="text-lg font-bold text-primary">Your Cart is Empty</h3>
-            <p className="text-sm text-slate-400 font-light mt-1.5 max-w-sm mx-auto">
-              Before you can check out, you must add some premium items to your shopping cart.
+          /* Empty State with custom botanical leaf-falling animation */
+          <div className="text-center py-16 bg-[#FAF9F5]/40 border border-slate-200/80 rounded-3xl max-w-xl mx-auto my-8 px-6 relative overflow-hidden shadow-sm flex flex-col items-center justify-center min-h-[380px]">
+            <style>{`
+              @keyframes leaf-flutter {
+                0% { transform: translateY(-50px) translateX(0) rotate(0deg); opacity: 0; }
+                10% { opacity: 1; }
+                40% { transform: translateY(0px) translateX(-20px) rotate(-45deg); }
+                70% { transform: translateY(45px) translateX(15px) rotate(45deg); }
+                82% { transform: translateY(72px) translateX(0px) rotate(10deg); opacity: 1; }
+                95%, 100% { transform: translateY(72px) translateX(0px) rotate(0deg); opacity: 0; }
+              }
+              @keyframes trolley-roll {
+                0%, 78% { transform: scale(1) translateX(0) rotate(0deg); }
+                82% { transform: scale3d(1.1, 0.84, 1) translateX(8px) rotate(4deg); }
+                85% { transform: scale3d(0.92, 1.08, 1) translateX(-5px) rotate(-3deg); }
+                88% { transform: scale3d(1.04, 0.96, 1) translateX(2px) rotate(1deg); }
+                94%, 100% { transform: scale(1) translateX(0) rotate(0deg); }
+              }
+              @keyframes ring-expand {
+                0%, 78% { transform: scale(0.5); opacity: 0; }
+                82% { opacity: 0.6; }
+                95%, 100% { transform: scale(1.6); opacity: 0; }
+              }
+              @keyframes float-gentle {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+              }
+              .animate-leaf {
+                animation: leaf-flutter 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+              }
+              .animate-trolley {
+                animation: trolley-roll 5s ease-in-out infinite;
+              }
+              .animate-ripple {
+                animation: ring-expand 5s ease-out infinite;
+                border: 1px solid rgba(181, 140, 84, 0.4);
+              }
+              .animate-float-bag {
+                animation: float-gentle 4s ease-in-out infinite;
+              }
+            `}</style>
+
+            {/* Animation Scene */}
+            <div className="relative w-36 h-36 flex items-center justify-center mb-6 select-none">
+              
+              {/* Leaf falling from top */}
+              <div className="absolute top-0 w-8 h-8 text-[#b58c54] animate-leaf z-20 pointer-events-none">
+                <Leaf className="w-full h-full fill-accent/10" />
+              </div>
+
+              {/* Ripple expanding on impact */}
+              <div className="absolute w-16 h-16 rounded-full animate-ripple z-0 pointer-events-none" style={{ top: '68px' }}></div>
+
+              {/* Floating & Bouncing Shopping Cart Container */}
+              <div className="animate-float-bag z-10">
+                <div className="animate-trolley p-4 rounded-full bg-white border border-slate-200/80 shadow-md text-primary flex items-center justify-center relative w-18 h-18">
+                  <ShoppingCart className="w-8 h-8 text-primary" />
+                </div>
+              </div>
+
+            </div>
+
+            <h3 className="text-xl font-serif font-bold text-primary tracking-tight">Your Cart is Empty</h3>
+            <p className="text-xs text-slate-400 font-light mt-2 max-w-xs mx-auto leading-relaxed">
+              Before you can check out, you must add some premium botanical items to your shopping cart.
             </p>
             <Link
               href="/products"
-              className="mt-6 inline-flex items-center gap-1.5 px-6 py-2.5 bg-primary text-white hover:bg-primary-light rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm active:scale-95"
+              className="group mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-[#20352c] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer"
             >
               <span>Browse Catalog</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform duration-300" />
             </Link>
           </div>
         ) : (

@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, role?: 'admin' | 'customer') => Promise<void>;
+  login: (email: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   register: (email: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -101,14 +101,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, role: 'admin' | 'customer' = 'customer') => {
+  const login = async (email: string) => {
     setIsLoading(true);
+    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
     if (isSupabaseConfigured() && supabase) {
       // Sign in / sign up via magic link
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          shouldCreateUser: true
+          shouldCreateUser: true,
+          data: {
+            role: determinedRole
+          }
         }
       });
       if (error) {
@@ -118,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } else {
       // Local storage fallback
-      const sessionUser = db.login(email, role);
+      const sessionUser = db.login(email, determinedRole);
       setUser(sessionUser);
     }
     setIsLoading(false);
@@ -144,12 +148,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (email: string, name: string) => {
     setIsLoading(true);
+    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
     if (isSupabaseConfigured() && supabase) {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          data: { name, role: 'customer' }
+          data: { name, role: determinedRole }
         }
       });
       if (error) {

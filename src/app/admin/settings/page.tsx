@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Layout, QrCode, PhoneCall, Percent, Settings, Check } from 'lucide-react';
 import { db } from '@/lib/db';
 import { useToast } from '@/context/ToastContext';
+import HairOilLoader from '@/components/HairOilLoader';
 
 export default function AdminSettings() {
   const { showToast } = useToast();
@@ -105,7 +106,7 @@ export default function AdminSettings() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <HairOilLoader size="sm" />
       </div>
     );
   }

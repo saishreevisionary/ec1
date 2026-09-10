@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, Package, FolderTree, ShoppingCart, 
   AlertTriangle, Receipt, Users, Settings, LogOut, 
-  Store, Menu, X, ShieldAlert 
+  Store, Menu, X, ShieldAlert, Star
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import HairOilLoader from '@/components/HairOilLoader';
 
 export default function AdminLayout({
   children,
@@ -24,16 +25,14 @@ export default function AdminLayout({
     // If auth finishes loading and user is not admin, redirect or block
     if (!isLoading && !user) {
       // Mock log in as admin for direct developer inspection ease
-      // In production, we block. Here, we can auto-login admin to make testing immediate!
-      // This is a premium Developer Experience (DX) helper
       // console.log("No session found, login default admin");
     }
   }, [user, isLoading]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-[#FAF9F5] flex items-center justify-center">
+        <HairOilLoader size="lg" />
       </div>
     );
   }
@@ -75,7 +74,7 @@ export default function AdminLayout({
   // Dx Helper: login admin
   function dbLoginAdmin() {
     if (typeof window !== 'undefined') {
-      const defaultAdmin = { id: 'admin-uuid', email: 'admin@lendorastore.com', name: 'Alexander Wright', role: 'admin', created_at: new Date().toISOString() };
+      const defaultAdmin = { id: 'admin-uuid', email: 'admin@venuss.co.in', name: 'Alexander Wright', role: 'admin', created_at: new Date().toISOString() };
       localStorage.setItem('lendorastore_session', JSON.stringify(defaultAdmin));
       router.refresh();
     }
@@ -86,6 +85,7 @@ export default function AdminLayout({
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: FolderTree },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Reviews', href: '/admin/reviews', icon: Star },
     { name: 'Inventory', href: '/admin/inventory', icon: AlertTriangle },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Invoices', href: '/admin/invoices', icon: Receipt },
