@@ -93,3 +93,2200 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #c5a880;
 }
+
+/* ── Botanical Price Range Slider ── */
+.botanical-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: #E0E7DE;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.botanical-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #254936;
+  border: 2px solid #FAF8F0;
+  box-shadow: 0 1px 4px rgba(16, 44, 32, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.botanical-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  background: #102C20;
+}
+
+.botanical-range-slider::-webkit-slider-thumb:active {
+  transform: scale(1.25);
+  background: #102C20;
+  box-shadow: 0 0 0 4px rgba(37, 73, 54, 0.15);
+}
+
+.botanical-range-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #254936;
+  border: 2px solid #FAF8F0;
+  box-shadow: 0 1px 4px rgba(16, 44, 32, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.botanical-range-slider::-moz-range-thumb:hover {
+  transform: scale(1.18);
+  background: #102C20;
+}
+
+.botanical-range-slider::-moz-range-thumb:active {
+  transform: scale(1.25);
+  background: #102C20;
+  box-shadow: 0 0 0 4px rgba(37, 73, 54, 0.15);
+}
+
+/* ── Live Subtle Botanical Movement & Margins ── */
+@keyframes botanical-breeze-left {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0px) scale(1);
+  }
+  50% {
+    transform: rotate(1.2deg) translateY(-3px) scale(1.008);
+  }
+}
+
+@keyframes botanical-breeze-right {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0px) scale(1);
+  }
+  50% {
+    transform: rotate(-1.4deg) translateY(-2px) scale(1.006);
+  }
+}
+
+@keyframes petal-float-slow {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-20px, 240px) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes mote-drift {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(6px, -10px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes mouse-wheel-pulse {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 0.3;
+  }
+}
+
+.animate-botanical-left {
+  animation: botanical-breeze-left 14s ease-in-out infinite;
+  transform-origin: top left;
+}
+
+.animate-botanical-right {
+  animation: botanical-breeze-right 16s ease-in-out infinite;
+  transform-origin: top right;
+}
+
+.animate-petal-slow {
+  animation: petal-float-slow 20s ease-in-out infinite;
+}
+
+.animate-mote {
+  animation: mote-drift 8s ease-in-out infinite;
+}
+
+.animate-mouse-wheel {
+  animation: mouse-wheel-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-botanical-left,
+  .animate-botanical-right,
+  .animate-petal-slow,
+  .animate-mote,
+  .animate-mouse-wheel {
+    animation: none !important;
+  }
+}
+
+/* ── Botanical Filter Sidebar Smooth Scrolling ── */
+.botanical-filter-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 73, 54, 0.25) transparent;
+}
+
+.botanical-filter-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.botanical-filter-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.botanical-filter-scroll::-webkit-scrollbar-thumb {
+  background: rgba(37, 73, 54, 0.2);
+  border-radius: 9999px;
+}
+
+.botanical-filter-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 73, 54, 0.45);
+}
+
+/* ── Skeleton shimmer animation ── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer {
+  animation: shimmer 1.6s infinite;
+}
+
+/* ── Invoice Print Styles ── */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white !important; }
+  * { color: black !important; }
+}
+
+.print-only { display: none; }
+
+/* ── VENUSS LIVE HERO BACKGROUND ANIMATIONS ── */
+@keyframes venussWave1 {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate(3%, 2%) rotate(5deg) scale(1.04); }
+  100% { transform: translate(-2%, 4%) rotate(-4deg) scale(1.02); }
+}
+
+@keyframes venussWave2 {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate(-4%, -3%) rotate(-6deg) scale(1.06); }
+  100% { transform: translate(3%, -2%) rotate(4deg) scale(1.03); }
+}
+
+@keyframes venussWave3 {
+  0% { transform: scale(0.95); opacity: 0.15; }
+  50% { transform: scale(1.08); opacity: 0.28; }
+  100% { transform: scale(0.98); opacity: 0.18; }
+}
+
+@keyframes venussBlob1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-25px, 20px) scale(1.1); }
+  100% { transform: translate(15px, -15px) scale(0.95); }
+}
+
+@keyframes venussBlob2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, -20px) scale(1.08); }
+  100% { transform: translate(-20px, 15px) scale(1.02); }
+}
+
+@keyframes venussBlob3 {
+  0% { transform: translate(0, 0) scale(0.95); }
+  50% { transform: translate(-15px, -15px) scale(1.12); }
+  100% { transform: translate(10px, 10px) scale(1); }
+}
+
+@keyframes venussLeafSway1 {
+  0% { transform: rotate(-4deg); }
+  100% { transform: rotate(5deg); }
+}
+
+@keyframes venussLeafSway2 {
+  0% { transform: rotate(4deg); }
+  100% { transform: rotate(-5deg); }
+}
+
+@keyframes venussParticleFloat1 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  50% { transform: translate(6px, -14px); opacity: 0.6; }
+}
+
+@keyframes venussParticleFloat2 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  50% { transform: translate(-8px, -18px); opacity: 0.55; }
+}
+
+@keyframes venussParticleFloat3 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.25; }
+  50% { transform: translate(10px, -12px); opacity: 0.65; }
+}
+
+@keyframes venussParticleFloat4 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  50% { transform: translate(-6px, -16px); opacity: 0.5; }
+}
+
+@keyframes venussTravelingTrack {
+  0% {
+    transform: translateX(-5%);
+    top: 48%;
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.9;
+  }
+  50% {
+    top: 36%;
+  }
+  95% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(105%);
+    top: 52%;
+    opacity: 0;
+  }
+}
+
+@keyframes venussTravelingBob {
+  0% {
+    transform: translateY(-8px) rotate(16deg);
+  }
+  50% {
+    transform: translateY(10px) rotate(-8deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(16deg);
+  }
+}
+
+.venuss-wave-1 {
+  animation: venussWave1 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.venuss-wave-2 {
+  animation: venussWave2 22s ease-in-out infinite alternate-reverse;
+  will-change: transform;
+}
+
+.venuss-wave-3 {
+  animation: venussWave3 16s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.venuss-blob-1 {
+  animation: venussBlob1 16s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.venuss-blob-2 {
+  animation: venussBlob2 20s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.venuss-blob-3 {
+  animation: venussBlob3 17s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.venuss-leaf-sway-1 {
+  transform-origin: top left;
+  animation: venussLeafSway1 12s ease-in-out infinite alternate;
+}
+
+.venuss-leaf-sway-2 {
+  transform-origin: bottom right;
+  animation: venussLeafSway2 14s ease-in-out infinite alternate;
+}
+
+.venuss-particle-1 {
+  animation: venussParticleFloat1 9s ease-in-out infinite;
+}
+
+.venuss-particle-2 {
+  animation: venussParticleFloat2 12s ease-in-out infinite;
+}
+
+.venuss-particle-3 {
+  animation: venussParticleFloat3 10s ease-in-out infinite;
+}
+
+.venuss-particle-4 {
+  animation: venussParticleFloat4 14s ease-in-out infinite;
+}
+
+.venuss-traveling-leaf-track {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  animation: venussTravelingTrack 24s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+  will-change: transform, top, opacity;
+}
+
+.venuss-traveling-leaf-wrapper {
+  animation: venussTravelingBob 5.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Paused State */
+.venuss-paused,
+.venuss-paused * {
+  animation-play-state: paused !important;
+}
+
+/* Accessibility: Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .venuss-wave-1,
+  .venuss-wave-2,
+  .venuss-wave-3,
+  .venuss-blob-1,
+  .venuss-blob-2,
+  .venuss-blob-3,
+  .venuss-leaf-sway-1,
+  .venuss-leaf-sway-2,
+  .venuss-particle-1,
+  .venuss-particle-2,
+  .venuss-particle-3,
+  .venuss-particle-4,
+  .venuss-traveling-leaf-track,
+  .venuss-traveling-leaf-wrapper {
+    animation: none !important;
+  }
+}
+
+/* === LIVING BOTANICAL ENVIRONMENT STYLES === */
+
+/* ==========================================================================
+   TRUE LIVE BOTANICAL GARDEN BACKGROUND (Multi-Layer Depth System)
+   ========================================================================== */
+.live-botanical-garden {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  contain: layout style paint;
+}
+
+.garden-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.garden-layer--far {
+  z-index: 0;
+}
+
+.garden-layer--mid {
+  z-index: 1;
+}
+
+.garden-layer--fore {
+  z-index: 2;
+}
+
+/* --------------------------------------------------------------------------
+   1. LAYER 1: FAR BACKGROUND & DYNAMIC SUNLIGHT
+   -------------------------------------------------------------------------- */
+.garden-far-bokeh {
+  animation: far-bokeh-pan 48s ease-in-out infinite alternate;
+}
+
+@keyframes far-bokeh-pan {
+  0% {
+    transform: scale(1.05) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-14px, 8px);
+  }
+  100% {
+    transform: scale(1.05) translate(10px, -6px);
+  }
+}
+
+/* Moving Warm Sunlight Rays */
+.garden-sunlight-beam-wrapper {
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 780px;
+  height: 780px;
+  pointer-events: none;
+}
+
+.garden-sunbeam-core {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 246, 218, 0.5) 0%, rgba(248, 222, 154, 0.24) 35%, transparent 70%);
+  filter: blur(40px);
+  animation: sunbeam-breathe 14s ease-in-out infinite;
+}
+
+.garden-sunbeam-rays {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: conic-gradient(
+    from 120deg at 12% 12%,
+    transparent 0deg,
+    rgba(255, 245, 205, 0.16) 15deg,
+    transparent 32deg,
+    rgba(255, 245, 205, 0.24) 48deg,
+    transparent 62deg,
+    rgba(255, 245, 205, 0.14) 78deg,
+    transparent 95deg
+  );
+  filter: blur(22px);
+  transform-origin: 12% 12%;
+  animation: sunray-shimmer 22s ease-in-out infinite;
+}
+
+@keyframes sunbeam-breathe {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes sunray-shimmer {
+  0%, 100% {
+    transform: rotate(0deg);
+    opacity: 0.8;
+  }
+  45% {
+    transform: rotate(2.8deg);
+    opacity: 1;
+  }
+  75% {
+    transform: rotate(-1.5deg);
+    opacity: 0.88;
+  }
+}
+
+.garden-light-pulse {
+  animation: ambient-orb-pulse 16s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-orb-pulse {
+  0% { transform: scale(1); opacity: 0.16; }
+  100% { transform: scale(1.12); opacity: 0.24; }
+}
+
+/* --------------------------------------------------------------------------
+   2. LAYER 2: MIDGROUND CANOPIES & CONTINUOUS GUTTER FLORA SYSTEM
+   All midground plants grow strictly from outer viewport borders into gutters.
+   Center content area is 100% clean and unobstructed.
+   -------------------------------------------------------------------------- */
+.botanical-canopy {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Left Hero Canopy: Arching White Blossom Branch + Monarch Butterfly */
+.botanical-canopy--top-left {
+  top: -45px;
+  left: -35px;
+  width: 460px;
+  height: 460px;
+  z-index: 2;
+}
+
+/* Right Hero Canopy: Arching Pink Damask Rose Branch */
+.botanical-canopy--top-right {
+  top: -35px;
+  right: -30px;
+  width: 440px;
+  height: 560px;
+  z-index: 2;
+}
+
+/* Continuous Living Garden Gutter Flora (Along Document Height) */
+.botanical-gutter-flora {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Collection Transitions (top ~860px - 1400px) */
+.botanical-gutter-flora--collection-left {
+  top: 860px;
+  left: -25px;
+  width: 260px;
+  height: 340px;
+}
+
+.botanical-gutter-flora--collection-right {
+  top: 890px;
+  right: -25px;
+  width: 240px;
+  height: 320px;
+}
+
+/* Featured Products Transitions (top ~1550px - 2400px) - Gutter only */
+.botanical-gutter-flora--products-left {
+  top: 1550px;
+  left: -30px;
+  width: 280px;
+  height: 380px;
+}
+
+.botanical-gutter-flora--products-right {
+  top: 1680px;
+  right: -25px;
+  width: 260px;
+  height: 360px;
+}
+
+/* Lower Sections (top ~2550px - 3400px) */
+.botanical-gutter-flora--lower-left {
+  top: 2550px;
+  left: -30px;
+  width: 270px;
+  height: 360px;
+}
+
+.botanical-gutter-flora--lower-right {
+  top: 2750px;
+  right: -30px;
+  width: 270px;
+  height: 360px;
+}
+
+/* Bottom Grounded Bases */
+.botanical-gutter-flora--bottom-moss {
+  bottom: 25px;
+  left: -25px;
+  width: 300px;
+  height: 300px;
+}
+
+.botanical-gutter-flora--bottom-foliage {
+  bottom: 20px;
+  right: -30px;
+  width: 320px;
+  height: 320px;
+}
+
+/* ==========================================================================
+   PRODUCT BOTANICAL FRAME (Full Viewport-Bleed Botanical Margins)
+   Frames the Featured Botanical Products section along the LEFT & RIGHT screen margins.
+   Layer 1: Visible living botanical elements in the empty side margins (8–15%).
+   Layer 10: Central website content (100% clean, never obstructed).
+   ========================================================================== */
+.product-botanical-frame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 1. BACKGROUND: Soft blurred atmospheric silhouette behind heading */
+.product-margin-bg-silhouette {
+  position: absolute;
+  top: -25px;
+  left: 15vw;
+  width: 280px;
+  height: 140px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 2. PRIMARY FOCAL POINT: Right Screen Margin Flowering Branch (🌸) */
+.product-margin-branch--right {
+  position: absolute;
+  top: 10%;
+  right: -25px;
+  width: min(11vw, 170px);
+  height: 360px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 3. SECONDARY: Left Screen Margin Foliage Branch (🌿) */
+.product-margin-branch--left {
+  position: absolute;
+  top: 14%;
+  left: -25px;
+  width: min(10vw, 155px);
+  height: 340px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 4. BOTTOM-LEFT: Minimal tender foreground leaf sprig */
+.product-margin-branch--bottom-left {
+  position: absolute;
+  bottom: 0;
+  left: -20px;
+  width: min(8vw, 100px);
+  height: 100px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 5. BOTTOM-RIGHT: Minimal whisper-soft partial foliage fragment */
+.product-margin-branch--bottom-right {
+  position: absolute;
+  bottom: 0;
+  right: -20px;
+  width: min(7vw, 90px);
+  height: 90px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Connected Organism Movement around Screen Margin Anchors */
+.product-margin-organism {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.product-margin-organism--right-rose {
+  transform-origin: 100% 18%;
+  animation: margin-sway-right-rose 21s ease-in-out infinite;
+}
+
+.product-margin-organism--left-foliage {
+  transform-origin: 0% 22%;
+  animation: margin-sway-left-foliage 18s ease-in-out infinite;
+}
+
+.product-margin-organism--bottom-left {
+  transform-origin: 0% 90%;
+  animation: margin-sway-bottom-left 25s ease-in-out infinite;
+}
+
+.product-margin-organism--bottom-right {
+  transform-origin: 100% 85%;
+  animation: margin-sway-bottom-right 28s ease-in-out infinite;
+}
+
+@keyframes margin-sway-right-rose {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  34% { transform: rotate(-1.2deg) translateY(-2px); }
+  68% { transform: rotate(0.9deg) translateY(1px); }
+}
+
+@keyframes margin-sway-left-foliage {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  36% { transform: rotate(1.3deg) translateY(-2px); }
+  72% { transform: rotate(-1.0deg) translateY(1px); }
+}
+
+@keyframes margin-sway-bottom-left {
+  0%, 100% { transform: rotate(0deg); }
+  45% { transform: rotate(1.1deg); }
+  80% { transform: rotate(-0.8deg); }
+}
+
+@keyframes margin-sway-bottom-right {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-0.9deg); }
+  78% { transform: rotate(0.8deg); }
+}
+
+/* Subtle Natural Bloom Pulse on the Damask Rose */
+.product-focal-flower-bloom {
+  animation: rose-bloom-pulse 14s ease-in-out infinite;
+}
+
+@keyframes rose-bloom-pulse {
+  0%, 100% { transform: scale(1) rotate(-6deg); }
+  50% { transform: scale(1.03) rotate(-4deg); }
+}
+
+/* Occasional Detached Rose Petal Drifting in the Right Margin */
+.margin-falling-petal {
+  position: absolute;
+  top: 110px;
+  right: 50px;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  animation: margin-petal-drift 24s ease-in-out infinite;
+}
+
+@keyframes margin-petal-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 0.85;
+    transform: translate(-15px, 30px) rotate(25deg);
+  }
+  45% {
+    opacity: 0.7;
+    transform: translate(-35px, 90px) rotate(65deg);
+  }
+  75% {
+    opacity: 0.4;
+    transform: translate(-45px, 160px) rotate(110deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50px, 220px) rotate(150deg);
+  }
+}
+
+/* ==========================================================================
+   NEWSLETTER BOTANICAL MARGINS (Screen Edge Framing for Stay Curated)
+   Keeps the central white "Stay Curated" card completely clean.
+   Foliage anchored strictly to outer 0–8vw screen borders.
+   ========================================================================== */
+.newsletter-botanical-frame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.newsletter-margin-branch {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.newsletter-margin-branch--left {
+  top: 16%;
+  left: -25px;
+  width: min(9vw, 140px);
+  height: 280px;
+}
+
+.newsletter-margin-branch--right {
+  top: 12%;
+  right: -25px;
+  width: min(10vw, 150px);
+  height: 300px;
+}
+
+.newsletter-margin-organism {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.newsletter-margin-organism--left {
+  transform-origin: 0% 25%;
+  animation: newsletter-sway-left 19s ease-in-out infinite;
+}
+
+.newsletter-margin-organism--right {
+  transform-origin: 100% 20%;
+  animation: newsletter-sway-right 23s ease-in-out infinite;
+}
+
+@keyframes newsletter-sway-left {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  35% { transform: rotate(1.1deg) translateY(-2px); }
+  70% { transform: rotate(-0.9deg) translateY(1px); }
+}
+
+@keyframes newsletter-sway-right {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  38% { transform: rotate(-1.1deg) translateY(-2px); }
+  72% { transform: rotate(0.8deg) translateY(1px); }
+}
+
+.newsletter-falling-petal {
+  position: absolute;
+  top: 90px;
+  right: 40px;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  animation: newsletter-petal-drift 26s ease-in-out infinite;
+}
+
+@keyframes newsletter-petal-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 0.8;
+    transform: translate(-12px, 25px) rotate(30deg);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-30px, 80px) rotate(80deg);
+  }
+  80% {
+    opacity: 0.3;
+    transform: translate(-40px, 140px) rotate(130deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-45px, 190px) rotate(170deg);
+  }
+}
+
+/* ==========================================================================
+   CATALOG BOTANICAL MARGINS (Screen Edge Framing for Store / Catalog Page)
+   Frames the /products page along the LEFT & RIGHT screen margins.
+   Outer 0–8vw edge anchored, center 76–84% is 100% clean.
+   ========================================================================== */
+.catalog-botanical-frame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.catalog-margin-branch {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.catalog-margin-branch--left {
+  top: 140px;
+  left: -25px;
+  width: min(10vw, 160px);
+  height: 360px;
+}
+
+.catalog-margin-branch--right {
+  top: 110px;
+  right: -25px;
+  width: min(11vw, 170px);
+  height: 380px;
+}
+
+.catalog-margin-organism {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.catalog-margin-organism--left {
+  transform-origin: 0% 20%;
+  animation: catalog-sway-left 20s ease-in-out infinite;
+}
+
+.catalog-margin-organism--right {
+  transform-origin: 100% 18%;
+  animation: catalog-sway-right 22s ease-in-out infinite;
+}
+
+@keyframes catalog-sway-left {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  35% { transform: rotate(1.2deg) translateY(-2px); }
+  70% { transform: rotate(-0.9deg) translateY(1px); }
+}
+
+@keyframes catalog-sway-right {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  38% { transform: rotate(-1.2deg) translateY(-2px); }
+  72% { transform: rotate(0.9deg) translateY(1px); }
+}
+
+/* Connected Organism Movement: Branches sway with natural physics */
+.botanical-branch-organism {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.botanical-branch-organism--white {
+  transform-origin: 30px 30px;
+  animation: organic-branch-sway-left 17s ease-in-out infinite;
+  transform: rotate(var(--breeze-left, 0deg));
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.botanical-branch-organism--roses {
+  transform-origin: 390px 40px;
+  animation: organic-branch-sway-right 19s ease-in-out infinite;
+  transform: rotate(var(--breeze-right, 0deg));
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.botanical-branch-organism--collection-left {
+  transform-origin: 0% 25%;
+  animation: gutter-branch-sway-left-1 18s ease-in-out infinite;
+}
+
+.botanical-branch-organism--collection-right {
+  transform-origin: 100% 20%;
+  animation: gutter-branch-sway-right-1 20s ease-in-out infinite;
+}
+
+.botanical-branch-organism--lower-left {
+  transform-origin: 0% 40%;
+  animation: gutter-branch-sway-left-1 21s ease-in-out infinite 2s;
+}
+
+.botanical-branch-organism--lower-right {
+  transform-origin: 100% 35%;
+  animation: gutter-branch-sway-right-1 23s ease-in-out infinite 3s;
+}
+
+.botanical-branch-organism--bottom-moss {
+  transform-origin: bottom left;
+  animation: foliage-sway-moss 20s ease-in-out infinite;
+}
+
+.botanical-branch-organism--bottom-foliage {
+  transform-origin: bottom right;
+  animation: foliage-sway-base 22s ease-in-out infinite;
+}
+
+@keyframes organic-branch-sway-left {
+  0%, 100% { transform: rotate(0deg) skewX(0deg); }
+  30% { transform: rotate(2.4deg) skewX(0.7deg); }
+  68% { transform: rotate(-1.5deg) skewX(-0.4deg); }
+  85% { transform: rotate(0.9deg) skewX(0.2deg); }
+}
+
+@keyframes organic-branch-sway-right {
+  0%, 100% { transform: rotate(0deg) skewX(0deg); }
+  26% { transform: rotate(-2.6deg) skewX(-0.8deg); }
+  60% { transform: rotate(1.8deg) skewX(0.5deg); }
+  82% { transform: rotate(-1deg) skewX(-0.3deg); }
+}
+
+@keyframes gutter-branch-sway-left-1 {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  35% { transform: rotate(2.2deg) translateY(-2px); }
+  72% { transform: rotate(-1.4deg) translateY(1px); }
+}
+
+@keyframes gutter-branch-sway-right-1 {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  32% { transform: rotate(-2.4deg) translateY(-2px); }
+  68% { transform: rotate(1.6deg) translateY(1px); }
+}
+
+@keyframes gutter-branch-sway-right-2 {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  38% { transform: rotate(-2deg) translateY(-2px); }
+  70% { transform: rotate(1.4deg) translateY(2px); }
+}
+
+@keyframes foliage-sway-moss {
+  0%, 100% { transform: rotate(-45deg); }
+  45% { transform: rotate(-41deg) translateY(-2px); }
+  75% { transform: rotate(-47deg) translateY(1px); }
+}
+
+@keyframes foliage-sway-base {
+  0%, 100% { transform: scaleX(-1) rotate(-30deg); }
+  50% { transform: scaleX(-1) rotate(-25deg) translateY(-3px); }
+}
+
+/* --------------------------------------------------------------------------
+   3. MONARCH BUTTERFLY (Natural subtle wildlife in garden canopy)
+   -------------------------------------------------------------------------- */
+.garden-monarch-butterfly {
+  position: absolute;
+  top: 200px;
+  left: 145px;
+  width: 65px;
+  height: 65px;
+  transform-origin: 30% 60%;
+  animation: butterfly-life-cycle 12s ease-in-out infinite;
+}
+
+.butterfly-wings {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 12px rgba(20, 55, 35, 0.22));
+  transform-origin: 30% 55%;
+  animation: butterfly-wing-beat 12s ease-in-out infinite;
+}
+
+@keyframes butterfly-life-cycle {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  35% { transform: translate(3px, -2px) rotate(1.5deg); }
+  70% { transform: translate(-2px, 2px) rotate(-1deg); }
+}
+
+@keyframes butterfly-wing-beat {
+  0%, 40% { transform: scaleX(1); }
+  42% { transform: scaleX(0.4) rotate(-3deg); }
+  44% { transform: scaleX(1); }
+  46% { transform: scaleX(0.35) rotate(-4deg); }
+  48% { transform: scaleX(1); }
+  50%, 100% { transform: scaleX(1); }
+}
+
+/* --------------------------------------------------------------------------
+   4. CONNECTED ROSE STEM, FOLIAGE & SECONDARY OPEN ROSE
+   -------------------------------------------------------------------------- */
+.rose-stem-network-svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 520px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rose-attached-foliage {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rose-attached-foliage--top {
+  top: 15px;
+  right: 60px;
+  transform-origin: 80% 20%;
+  animation: rose-leaf-sway-top 15s ease-in-out infinite;
+}
+
+.rose-attached-foliage--mid {
+  top: 165px;
+  right: 155px;
+  transform-origin: 75% 30%;
+  animation: rose-leaf-sway-mid 17s ease-in-out infinite;
+}
+
+.rose-attached-foliage--bottom {
+  top: 345px;
+  right: 130px;
+  transform-origin: 70% 20%;
+  animation: rose-leaf-sway-bot 19s ease-in-out infinite;
+}
+
+@keyframes rose-leaf-sway-top {
+  0%, 100% { transform: scaleX(-1) rotate(25deg); }
+  38% { transform: scaleX(-1) rotate(29deg) translateY(-2px); }
+  75% { transform: scaleX(-1) rotate(21deg) translateY(1px); }
+}
+
+@keyframes rose-leaf-sway-mid {
+  0%, 100% { transform: rotate(-40deg); }
+  45% { transform: rotate(-35deg) translateY(-3px); }
+  80% { transform: rotate(-43deg) translateY(1px); }
+}
+
+@keyframes rose-leaf-sway-bot {
+  0%, 100% { transform: scaleX(-1) rotate(10deg); }
+  42% { transform: scaleX(-1) rotate(14deg) translateY(-2px); }
+  82% { transform: scaleX(-1) rotate(7deg) translateY(1px); }
+}
+
+.rose-stem-bud-item {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.rose-stem-bud-item--top {
+  top: 48px;
+  right: 105px;
+  transform-origin: bottom center;
+  animation: rose-bud-sway-1 14s ease-in-out infinite;
+}
+
+@keyframes rose-bud-sway-1 {
+  0%, 100% { transform: rotate(-12deg); }
+  40% { transform: rotate(-6deg) translateY(-2px); }
+  75% { transform: rotate(-16deg) translateY(1px); }
+}
+
+.living-rose-secondary-bloom {
+  position: absolute;
+  top: 285px;
+  right: 90px;
+  width: 155px;
+  height: 155px;
+  transform-origin: center center;
+  z-index: 3;
+  animation: secondary-rose-sway 21s ease-in-out infinite;
+}
+
+@keyframes secondary-rose-sway {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  32% { transform: scale(1.02) rotate(-3.5deg) translateY(-2px); }
+  72% { transform: scale(0.99) rotate(2.5deg) translateY(1px); }
+}
+
+/* --------------------------------------------------------------------------
+   5. THE AUTHENTIC PHYSICAL PETAL-BY-PETAL BLOOM TRANSITION (36s Natural Cycle)
+   Zero image containers scaling in. Zero rectangular boundaries. Zero opacity jumps.
+   Each petal opens physically from its natural attachment point.
+   -------------------------------------------------------------------------- */
+.living-rose-blooming-unit {
+  position: absolute;
+  top: 60px;
+  right: 60px;
+  width: 200px;
+  height: 200px;
+  pointer-events: none;
+  z-index: 4;
+  animation: blooming-rose-settle-breathe 36s ease-in-out infinite;
+}
+
+@keyframes blooming-rose-settle-breathe {
+  0%, 48% { transform: scale(1) rotate(0deg); }
+  58% { transform: scale(1.01) rotate(0.8deg); }
+  70% { transform: scale(1.025) rotate(-0.5deg); }
+  84% { transform: scale(1) rotate(0deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.bloom-element {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Stage 1: Closed Rosebud with Green Sepals */
+.bloom-element--bud {
+  transform-origin: 50% 88%;
+  animation: natural-bud-morph 36s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+
+@keyframes natural-bud-morph {
+  0%, 14% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-2deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.05) rotate(2deg);
+  }
+  27% {
+    opacity: 0.55;
+    transform: scale(1.12) rotate(4deg);
+  }
+  34%, 86% {
+    opacity: 0;
+    transform: scale(1.2) rotate(5deg);
+  }
+  92% {
+    opacity: 0.65;
+    transform: scale(0.98) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-2deg);
+  }
+}
+
+/* Stage 3: Outer Petals Physical Opening (Sequentially from base hinges) */
+
+/* Petal 1: Top Outer Petal (Hinge: 50% 65%) */
+.bloom-element--petal-top {
+  transform-origin: 50% 65%;
+  animation: petal-unfold-top 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-top {
+  0%, 20% {
+    opacity: 0;
+    transform: scale(0.35, 0.45) translateY(22px) rotate(-24deg);
+  }
+  24% {
+    opacity: 0.85;
+    transform: scale(0.65, 0.75) translateY(12px) rotate(-12deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0) rotate(3deg);
+  }
+  38%, 86% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5, 0.6) translateY(16px) rotate(-15deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.35, 0.45) translateY(22px) rotate(-24deg);
+  }
+}
+
+/* Petal 2: Top-Right Outer Petal (Hinge: 45% 60%) */
+.bloom-element--petal-topright {
+  transform-origin: 45% 60%;
+  animation: petal-unfold-topright 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-topright {
+  0%, 22% {
+    opacity: 0;
+    transform: scale(0.35, 0.45) translate(-16px, 16px) rotate(26deg);
+  }
+  26% {
+    opacity: 0.85;
+    transform: scale(0.68, 0.78) translate(-8px, 8px) rotate(14deg);
+  }
+  33% {
+    opacity: 1;
+    transform: scale(1.02) translate(0, 0) rotate(-3deg);
+  }
+  40%, 86% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5, 0.6) translate(-12px, 12px) rotate(18deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.35, 0.45) translate(-16px, 16px) rotate(26deg);
+  }
+}
+
+/* Petal 3: Left Outer Petal (Hinge: 55% 52%) */
+.bloom-element--petal-left {
+  transform-origin: 55% 52%;
+  animation: petal-unfold-left 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-left {
+  0%, 24% {
+    opacity: 0;
+    transform: scale(0.4) translate(16px, 10px) rotate(-22deg);
+  }
+  28% {
+    opacity: 0.85;
+    transform: scale(0.7) translate(8px, 5px) rotate(-10deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.02) translate(0, 0) rotate(2deg);
+  }
+  42%, 86% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5) translate(12px, 8px) rotate(-16deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.4) translate(16px, 10px) rotate(-22deg);
+  }
+}
+
+/* Petal 4: Bottom-Right Outer Petal (Hinge: 46% 45%) */
+.bloom-element--petal-botright {
+  transform-origin: 46% 45%;
+  animation: petal-unfold-botright 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-botright {
+  0%, 26% {
+    opacity: 0;
+    transform: scale(0.4) translate(-12px, -12px) rotate(22deg);
+  }
+  30% {
+    opacity: 0.85;
+    transform: scale(0.72) translate(-6px, -6px) rotate(10deg);
+  }
+  37% {
+    opacity: 1;
+    transform: scale(1.02) translate(0, 0) rotate(-2deg);
+  }
+  44%, 86% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5) translate(-8px, -8px) rotate(16deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.4) translate(-12px, -12px) rotate(22deg);
+  }
+}
+
+/* Petal 5: Bottom-Left Outer Petal (Hinge: 54% 45%) */
+.bloom-element--petal-botleft {
+  transform-origin: 54% 45%;
+  animation: petal-unfold-botleft 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-botleft {
+  0%, 28% {
+    opacity: 0;
+    transform: scale(0.4) translate(12px, -12px) rotate(-20deg);
+  }
+  32% {
+    opacity: 0.85;
+    transform: scale(0.72) translate(6px, -6px) rotate(-9deg);
+  }
+  39% {
+    opacity: 1;
+    transform: scale(1.02) translate(0, 0) rotate(2deg);
+  }
+  46%, 86% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5) translate(8px, -8px) rotate(-14deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.4) translate(12px, -12px) rotate(-20deg);
+  }
+}
+
+/* Stage 4: Mid Petal Whorl (Expands outward from center) */
+.bloom-element--mid {
+  transform-origin: center center;
+  animation: petal-unfold-mid 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-mid {
+  0%, 30% {
+    opacity: 0;
+    transform: scale(0.45) rotate(14deg);
+  }
+  35% {
+    opacity: 0.85;
+    transform: scale(0.78) rotate(6deg);
+  }
+  42% {
+    opacity: 1;
+    transform: scale(1.02) rotate(-1deg);
+  }
+  48%, 86% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.55) rotate(10deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.45) rotate(14deg);
+  }
+}
+
+/* Stage 4: Inner Petals (Uncurls outward) */
+.bloom-element--inner {
+  transform-origin: center center;
+  animation: petal-unfold-inner 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes petal-unfold-inner {
+  0%, 34% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-16deg);
+  }
+  39% {
+    opacity: 0.85;
+    transform: scale(0.76) rotate(-6deg);
+  }
+  46% {
+    opacity: 1;
+    transform: scale(1.02) rotate(2deg);
+  }
+  52%, 86% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  92% {
+    opacity: 0.25;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-16deg);
+  }
+}
+
+/* Stage 5: Golden Stamen Center Core (Revealed in the heart) */
+.bloom-element--stamen {
+  transform-origin: center center;
+  animation: stamen-reveal-core 36s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes stamen-reveal-core {
+  0%, 38% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  44% {
+    opacity: 0.85;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  56%, 86% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  92% {
+    opacity: 0.2;
+    transform: scale(0.5);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. LAYER 3: OCCASIONAL NATURAL FALLING PETALS (Low Frequency)
+   -------------------------------------------------------------------------- */
+.falling-petal-event {
+  position: absolute;
+  pointer-events: none;
+}
+
+.falling-petal-event--1 {
+  top: 230px;
+  right: 140px;
+  animation: petal-drift-event-1 25s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.falling-petal-event--2 {
+  top: 360px;
+  right: 190px;
+  animation: petal-drift-event-2 33s cubic-bezier(0.25, 1, 0.5, 1) infinite 13s;
+}
+
+.falling-petal-event--white {
+  top: 190px;
+  left: 170px;
+  animation: petal-drift-event-white 27s cubic-bezier(0.25, 1, 0.5, 1) infinite 7s;
+}
+
+@keyframes petal-drift-event-1 {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+    transform: translate(-35px, 45px) rotate(35deg) scale(1);
+  }
+  48% {
+    transform: translate(-220px, 280px) rotate(120deg) scale(0.95);
+    opacity: 0.8;
+  }
+  82% {
+    transform: translate(-380px, 520px) rotate(240deg) scale(0.88);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-460px, 680px) rotate(320deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes petal-drift-event-2 {
+  0% {
+    transform: translate(0, 0) rotate(-20deg) scale(0.75);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+    transform: translate(-25px, 50px) rotate(25deg) scale(0.95);
+  }
+  50% {
+    transform: translate(-170px, 290px) rotate(90deg) scale(0.9);
+    opacity: 0.75;
+  }
+  85% {
+    transform: translate(-310px, 530px) rotate(190deg) scale(0.82);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(-380px, 670px) rotate(260deg) scale(0.75);
+    opacity: 0;
+  }
+}
+
+@keyframes petal-drift-event-white {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.75;
+    transform: translate(20px, 40px) rotate(45deg);
+  }
+  60% {
+    transform: translate(90px, 260px) rotate(140deg);
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate(140px, 460px) rotate(230deg);
+    opacity: 0;
+  }
+}
+
+/* Sunlight Floating Dust */
+.garden-sunlight-dust {
+  pointer-events: none;
+}
+.garden-dust-float-1 { animation: dust-float 16s ease-in-out infinite alternate; }
+.garden-dust-float-2 { animation: dust-float 19s ease-in-out infinite alternate 4s; }
+.garden-dust-float-3 { animation: dust-float 22s ease-in-out infinite alternate 8s; }
+
+@keyframes dust-float {
+  0% { transform: translate(0, 0); opacity: 0.3; }
+  50% { transform: translate(18px, -15px); opacity: 0.7; }
+  100% { transform: translate(-12px, 25px); opacity: 0.35; }
+}
+
+/* --------------------------------------------------------------------------
+   7. RESPONSIVE DESIGN & MOBILE SAFETY
+   -------------------------------------------------------------------------- */
+@media (max-width: 1280px) {
+  .botanical-canopy--top-left {
+    width: 380px;
+    height: 380px;
+    left: -40px;
+  }
+  .botanical-canopy--top-right {
+    width: 370px;
+    height: 480px;
+    right: -35px;
+  }
+  .living-rose-blooming-unit {
+    width: 175px;
+    height: 175px;
+    top: 52px;
+    right: 52px;
+  }
+  .living-rose-secondary-bloom {
+    width: 135px;
+    height: 135px;
+    top: 250px;
+    right: 80px;
+  }
+  .botanical-gutter-flora {
+    opacity: 0.75;
+    transform: scale(0.85);
+  }
+  .product-margin-branch--right {
+    width: 160px;
+    transform: scale(0.85);
+    transform-origin: 100% 20%;
+    opacity: 0.88;
+  }
+  .product-margin-branch--left {
+    width: 150px;
+    transform: scale(0.85);
+    transform-origin: 0% 22%;
+    opacity: 0.85;
+  }
+  .product-margin-branch--bottom-left,
+  .product-margin-branch--bottom-right {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+  .newsletter-margin-branch--right {
+    width: 120px;
+    transform: scale(0.85);
+    transform-origin: 100% 20%;
+    opacity: 0.85;
+  }
+  .newsletter-margin-branch--left {
+    width: 115px;
+    transform: scale(0.85);
+    transform-origin: 0% 22%;
+    opacity: 0.82;
+  }
+}
+
+@media (max-width: 1024px) {
+  .botanical-canopy--top-left {
+    width: 320px;
+    height: 320px;
+    left: -50px;
+    opacity: 0.9;
+  }
+  .botanical-canopy--top-right {
+    width: 310px;
+    height: 410px;
+    right: -45px;
+    opacity: 0.9;
+  }
+  .living-rose-blooming-unit {
+    width: 150px;
+    height: 150px;
+    top: 42px;
+    right: 42px;
+  }
+  .living-rose-secondary-bloom {
+    width: 115px;
+    height: 115px;
+    top: 215px;
+    right: 65px;
+  }
+  .botanical-gutter-flora {
+    display: none;
+  }
+  .product-margin-branch--right {
+    width: 110px;
+    transform: scale(0.62);
+    transform-origin: 100% 18%;
+    opacity: 0.65;
+  }
+  .product-margin-branch--left {
+    width: 105px;
+    transform: scale(0.62);
+    transform-origin: 0% 20%;
+    opacity: 0.6;
+  }
+  .product-margin-branch--bottom-left,
+  .product-margin-branch--bottom-right {
+    display: none;
+  }
+  .newsletter-margin-branch--right {
+    width: 90px;
+    transform: scale(0.62);
+    transform-origin: 100% 18%;
+    opacity: 0.65;
+  }
+  .newsletter-margin-branch--left {
+    width: 85px;
+    transform: scale(0.62);
+    transform-origin: 0% 20%;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 768px) {
+  .botanical-canopy--top-left {
+    width: 220px;
+    height: 220px;
+    left: -45px;
+    top: -35px;
+    opacity: 0.8;
+  }
+  .botanical-canopy--top-right {
+    width: 210px;
+    height: 280px;
+    right: -45px;
+    top: -25px;
+    opacity: 0.8;
+  }
+  .botanical-gutter-flora {
+    display: none;
+  }
+  .product-margin-branch--right,
+  .product-margin-branch--left,
+  .product-margin-branch--bottom-left,
+  .product-margin-branch--bottom-right,
+  .newsletter-margin-branch--right,
+  .newsletter-margin-branch--left {
+    display: none;
+  }
+  .falling-petal-event {
+    display: none;
+  }
+  .garden-monarch-butterfly {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. ACCESSIBILITY: PREFERS-REDUCED-MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce), (is-reduced-motion) {
+  .garden-far-bokeh,
+  .garden-sunbeam-core,
+  .garden-sunbeam-rays,
+  .garden-light-pulse,
+  .botanical-branch-organism--white,
+  .botanical-branch-organism--roses,
+  .botanical-branch-organism--collection-left,
+  .product-margin-organism--right-rose,
+  .product-margin-organism--left-foliage,
+  .product-margin-organism--bottom-left,
+  .product-margin-organism--bottom-right,
+  .product-focal-flower-bloom,
+  .margin-falling-petal,
+  .newsletter-margin-organism--left,
+  .newsletter-margin-organism--right,
+  .newsletter-falling-petal,
+  .botanical-branch-organism--lower-left,
+  .botanical-branch-organism--bottom-moss,
+  .garden-monarch-butterfly,
+  .butterfly-wings,
+  .rose-stem-bud-item--top,
+  .rose-stem-bud-item--mid,
+  .bloom-element--bud,
+  .bloom-element--petal-top,
+  .bloom-element--petal-topright,
+  .bloom-element--petal-left,
+  .bloom-element--petal-botright,
+  .bloom-element--petal-botleft,
+  .bloom-element--mid,
+  .bloom-element--inner,
+  .bloom-element--stamen,
+  .living-rose-secondary-bloom,
+  .falling-petal-event--1,
+  .falling-petal-event--2,
+  .falling-petal-event--white,
+  .garden-dust-float-1,
+  .garden-dust-float-2,
+  .garden-dust-float-3 {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .bloom-element--bud {
+    display: none !important;
+  }
+
+  .bloom-element--petal-top,
+  .bloom-element--petal-topright,
+  .bloom-element--petal-left,
+  .bloom-element--petal-botright,
+  .bloom-element--petal-botleft,
+  .bloom-element--mid,
+  .bloom-element--inner,
+  .bloom-element--stamen {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .falling-petal-event {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. PREMIUM LIVE BRAND INTRO ANIMATIONS
+   -------------------------------------------------------------------------- */
+@keyframes introBranchEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) rotate(-2.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes introBranchSway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(1.2deg) translateY(-2px);
+  }
+}
+
+@keyframes introRoseSway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-1.4deg) translateY(2px);
+  }
+}
+
+@keyframes introPetalDrift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(0.9);
+  }
+  20% {
+    opacity: 0.85;
+    transform: translate(12px, 35px) rotate(22deg) scale(1);
+  }
+  60% {
+    opacity: 0.75;
+    transform: translate(-8px, 95px) rotate(60deg) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(14px, 160px) rotate(110deg) scale(0.92);
+  }
+}
+
+@keyframes introTextReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+    letter-spacing: 0.28em;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: 0.22em;
+  }
+}
+
+@keyframes introSubtextReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    letter-spacing: 0.4em;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: 0.32em;
+  }
+}
+
+@keyframes introStatementReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cinematic camera drift entering garden */
+@keyframes cinematicGardenDrift {
+  0% {
+    transform: scale(1.05) translate(-0.4%, -0.4%);
+  }
+  100% {
+    transform: scale(1.00) translate(0%, 0%);
+  }
+}
+
+/* Volumetric morning sunbeam radiance */
+@keyframes sunbeamRadiance {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03) rotate(1.2deg);
+  }
+}
+
+/* Butterfly 3D Wing Flap with Natural Glides */
+@keyframes butterflyWingFlutterGlide {
+  0% { transform: scaleX(1) rotateY(0deg); }
+  7% { transform: scaleX(0.22) rotateY(46deg); }
+  14% { transform: scaleX(1) rotateY(0deg); }
+  21% { transform: scaleX(0.18) rotateY(50deg); }
+  28% { transform: scaleX(1) rotateY(0deg); }
+  35% { transform: scaleX(0.24) rotateY(42deg); }
+  42% { transform: scaleX(1) rotateY(0deg); }
+  50%, 65% { transform: scaleX(0.85) rotateY(15deg); } /* Natural gliding pause */
+  72% { transform: scaleX(0.22) rotateY(46deg); }
+  80% { transform: scaleX(1) rotateY(0deg); }
+  88% { transform: scaleX(0.26) rotateY(38deg); }
+  96% { transform: scaleX(1) rotateY(0deg); }
+  100% { transform: scaleX(1) rotateY(0deg); }
+}
+
+/* Butterfly 1: Enters from left, curves upward toward white jasmine canopy, lingers, rises toward sunlight */
+@keyframes butterflyFlightPath1 {
+  0% {
+    left: -60px;
+    top: 50%;
+    opacity: 0;
+    transform: scale(0.85) rotate(-18deg);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(0.92) rotate(-8deg);
+  }
+  42% {
+    left: 12%;
+    top: 34%;
+    transform: scale(0.98) rotate(4deg);
+  }
+  60% {
+    /* Lingering near jasmine blossoms */
+    left: 17%;
+    top: 28%;
+    transform: scale(1) rotate(-3deg);
+  }
+  80% {
+    left: 22%;
+    top: 18%;
+    transform: scale(0.95) rotate(-12deg);
+  }
+  100% {
+    left: 26%;
+    top: 10%;
+    opacity: 0.88;
+    transform: scale(0.9) rotate(-16deg);
+  }
+}
+
+/* Butterfly 2: Midground ambient butterfly drifting diagonally in depth */
+@keyframes butterflyFlightPath2 {
+  0% {
+    left: 20%;
+    top: 72%;
+    opacity: 0;
+    transform: scale(0.62) rotate(14deg);
+  }
+  22% {
+    opacity: 0.75;
+  }
+  50% {
+    left: 44%;
+    top: 52%;
+    transform: scale(0.66) rotate(6deg);
+  }
+  82% {
+    opacity: 0.7;
+  }
+  100% {
+    left: 70%;
+    top: 36%;
+    opacity: 0;
+    transform: scale(0.6) rotate(-4deg);
+  }
+}
+
+/* Butterfly 3: Foreground guide swooping across from left to right leading homepage handoff */
+@keyframes butterflyFlightPath3 {
+  0% {
+    left: -70px;
+    top: 66%;
+    opacity: 0;
+    transform: scale(1.12) rotate(-24deg);
+  }
+  18% {
+    opacity: 1;
+    left: 16%;
+    top: 54%;
+    transform: scale(1.15) rotate(-14deg);
+  }
+  52% {
+    left: 52%;
+    top: 39%;
+    transform: scale(1.12) rotate(-6deg);
+  }
+  82% {
+    left: 86%;
+    top: 27%;
+    opacity: 0.95;
+    transform: scale(1.08) rotate(4deg);
+  }
+  100% {
+    left: 108%;
+    top: 19%;
+    opacity: 0;
+    transform: scale(1.02) rotate(12deg);
+  }
+}
+
+/* Jasmine Bud untwirls and transitions into bloom */
+@keyframes jasmineBudUnfold {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.92) rotate(-4deg);
+  }
+  35% {
+    opacity: 0.85;
+    transform: scale(1.02) rotate(2deg);
+  }
+  65% {
+    opacity: 0;
+    transform: scale(1.1) rotate(6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1) rotate(6deg);
+  }
+}
+
+/* Jasmine Flower petals gracefully separate and open */
+@keyframes jasmineFlowerBloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.65) rotate(-12deg);
+  }
+  30% {
+    opacity: 0.4;
+    transform: scale(0.82) rotate(-6deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.03) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Soft Pink Rose bloom */
+@keyframes pinkRoseGentleBloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.76) rotate(-8deg);
+  }
+  60% {
+    opacity: 0.92;
+    transform: scale(1.03) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Gentle organic breeze sway */
+@keyframes gentleBreezeSway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(1.2deg) translateY(-2px);
+  }
+}
+
+/* Delicate airborne petal drift */
+@keyframes singlePetalDrift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.85);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate3d(-35px, 80px, 0) rotate(22deg) scale(0.92);
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-70px, 175px, 0) rotate(46deg) scale(0.82);
+  }
+}
+
+.intro-garden-drift {
+  animation: cinematicGardenDrift 4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-sunbeams {
+  animation: sunbeamRadiance 4.5s ease-in-out infinite alternate;
+}
+
+.intro-butterfly-wings {
+  animation: butterflyWingFlutterGlide 1.6s ease-in-out infinite;
+  transform-origin: 30% 55%;
+}
+
+.intro-butterfly-1 {
+  animation: butterflyFlightPath1 4.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.intro-butterfly-2 {
+  animation: butterflyFlightPath2 5.0s ease-in-out forwards;
+}
+
+.intro-butterfly-3 {
+  animation: butterflyFlightPath3 2.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.intro-jasmine-bud {
+  animation: jasmineBudUnfold 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-jasmine-flower {
+  animation: jasmineFlowerBloom 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-rose-bloom {
+  animation: pinkRoseGentleBloom 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.intro-breeze-sway {
+  animation: gentleBreezeSway 7s ease-in-out infinite;
+  transform-origin: top left;
+}
+
+.intro-petal-drift {
+  animation: singlePetalDrift 3.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-garden-drift,
+  .intro-sunbeams,
+  .intro-butterfly-wings,
+  .intro-butterfly-1,
+  .intro-butterfly-2,
+  .intro-butterfly-3,
+  .intro-jasmine-bud,
+  .intro-jasmine-flower,
+  .intro-rose-bloom,
+  .intro-breeze-sway,
+  .intro-petal-drift {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+

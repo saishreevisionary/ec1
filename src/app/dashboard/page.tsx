@@ -3,18 +3,20 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { User, ShoppingBag, MapPin, Heart, Edit, Trash2, CheckCircle2, ChevronRight, Printer, RefreshCw, X, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { User, ShoppingBag, MapPin, Heart, Edit, Trash2, CheckCircle2, ChevronRight, Printer, RefreshCw, X, Check, Eye, EyeOff, Sparkles, Truck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useToast } from '@/context/ToastContext';
 import { db, supabase, isSupabaseConfigured } from '@/lib/db';
 
 function UserDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, register } = useAuth();
+  const { user, register, login } = useAuth();
   const { wishlist, removeFromWishlist } = useWishlist();
+  const { showToast } = useToast();
   const promptPassword = searchParams.get('promptPassword') === 'true';
 
   // Active Tab
@@ -57,16 +59,6 @@ function UserDashboardContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!user) {
-      // Create session for testing if not logged in
-      const defaultUser = db.getCurrentSession();
-      if (!defaultUser) {
-        // Redirect to login modal on navbar or create a dummy customer session automatically
-        db.login('customer@lendorastore.com', 'customer');
-        router.refresh();
-      }
-    }
-
     if (user) {
       setProfileName(user.name);
       setProfileEmail(user.email);
@@ -78,48 +70,38 @@ function UserDashboardContent() {
     if (user) {
       const allOrders = await db.getOrders(user.id);
       setOrders(allOrders);
-      
-      // Load addresses from localdb
-      if (typeof window !== 'undefined') {
-        const storedAddr = localStorage.getItem(`lendorastore_addresses_${user.id}`);
-        if (storedAddr) {
-          setAddresses(JSON.parse(storedAddr));
-        } else {
-          // Seed a default address
-          const defaults = [{
-            id: 'addr-default-1',
-            name: user.name,
-            phone: '+1 (800) 854-8290',
-            street_address: 'Apartment 4B, 300 Castro Street',
-            city: 'Mountain View',
-            pincode: '94041',
-            is_default: true
-          }];
-          localStorage.setItem(`lendorastore_addresses_${user.id}`, JSON.stringify(defaults));
-          setAddresses(defaults);
-        }
+
+      // Load addresses using the proper db method
+      const addrs = await db.getAddresses(user.id);
+      if (addrs.length > 0) {
+        setAddresses(addrs);
+      } else {
+        // Seed a sensible default address
+        const defaultAddr = {
+          id: 'addr-default-1',
+          name: user.name,
+          phone: '+91 94432 12345',
+          street_address: '123 Botanical Gardens Lane',
+          city: 'Chennai',
+          pincode: '600001',
+          is_default: true
+        };
+        await db.saveAddress(user.id, defaultAddr);
+        setAddresses([defaultAddr]);
       }
     }
   };
 
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user) {
-      const updatedUser = { ...user, name: profileName };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('lendorastore_session', JSON.stringify(updatedUser));
-        
-        // Update user in the USERS list
-        const users = JSON.parse(localStorage.getItem('lendorastore_users') || '[]');
-        const idx = users.findIndex((u: any) => u.id === user.id);
-        if (idx !== -1) {
-          users[idx].name = profileName;
-          localStorage.setItem('lendorastore_users', JSON.stringify(users));
-        }
-      }
+    if (!user) return;
+    try {
+      await db.updateUserProfile(user.id, { name: profileName });
       setIsProfileEditing(false);
-      alert('Profile updated successfully.');
+      showToast('Profile updated successfully!');
       router.refresh();
+    } catch (err: any) {
+      showToast('Failed to update profile: ' + (err?.message || 'Unknown error'));
     }
   };
 
@@ -171,12 +153,11 @@ function UserDashboardContent() {
     }
   };
 
-  const handleAddAddress = (e: React.FormEvent) => {
+  const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     const newAddr = {
-      id: crypto.randomUUID(),
       name: addrName,
       phone: addrPhone,
       street_address: addrStreet,
@@ -185,11 +166,8 @@ function UserDashboardContent() {
       is_default: addresses.length === 0
     };
 
-    const list = [...addresses, newAddr];
-    setAddresses(list);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`lendorastore_addresses_${user.id}`, JSON.stringify(list));
-    }
+    const saved = await db.saveAddress(user.id, newAddr);
+    setAddresses(prev => [...prev, saved]);
 
     setIsAddressModalOpen(false);
     setAddrName('');
@@ -199,13 +177,10 @@ function UserDashboardContent() {
     setAddrPincode('');
   };
 
-  const handleDeleteAddress = (id: string) => {
+  const handleDeleteAddress = async (id: string) => {
     if (!user) return;
-    const list = addresses.filter(a => a.id !== id);
-    setAddresses(list);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`lendorastore_addresses_${user.id}`, JSON.stringify(list));
-    }
+    await db.deleteAddress(user.id, id);
+    setAddresses(prev => prev.filter(a => a.id !== id));
   };
 
   // Get order progress step
@@ -213,6 +188,38 @@ function UserDashboardContent() {
     const steps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
     return steps.indexOf(status.toLowerCase());
   };
+
+  if (!user) {
+    return (
+      <>
+        <Navbar />
+        <main className="max-w-xl mx-auto px-4 py-20 flex-grow w-full text-center animate-fade-in font-sans">
+          <div className="w-16 h-16 bg-[#1F452C]/10 text-[#1F452C] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#1F452C]/20 shadow-xs">
+            <User className="w-8 h-8 text-[#2E5E3E]" />
+          </div>
+          <h1 className="text-2xl font-serif font-bold text-[#1F452C]">Customer Account Portal</h1>
+          <p className="text-xs text-slate-500 font-light mt-2 leading-relaxed">
+            Please sign in to review your order progress, live courier tracking updates, tax invoices, and saved delivery addresses.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => login('customer@venuss.co.in', 'customer')}
+              className="px-6 py-3 bg-[#1F452C] hover:bg-[#132A1C] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
+            >
+              Sign In with Customer Demo
+            </button>
+            <Link
+              href="/products"
+              className="px-6 py-3 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider"
+            >
+              Explore Catalog
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -405,6 +412,19 @@ function UserDashboardContent() {
                             </div>
                           )}
 
+                          {/* Live Courier Tracking info */}
+                          {order.tracking_number && (
+                            <div className="p-3 bg-emerald-50/80 border border-emerald-200/60 rounded-xl flex items-center justify-between text-xs">
+                              <div>
+                                <span className="text-[10px] font-bold uppercase text-emerald-800 tracking-wider">Live Courier Dispatch</span>
+                                <p className="font-semibold text-emerald-950 mt-0.5">
+                                  Dispatched via {order.courier_name || 'Delhivery'} — Tracking #{order.tracking_number}
+                                </p>
+                              </div>
+                              <Truck className="w-5 h-5 text-emerald-700" />
+                            </div>
+                          )}
+
                           {/* Grand total summaries */}
                           <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-light text-slate-500 gap-2.5">
                             <div>
@@ -511,7 +531,7 @@ function UserDashboardContent() {
                           <Link href={`/products/${item.slug}`} className="text-xs font-semibold text-primary group-hover:text-accent truncate line-clamp-1 max-w-[150px]">
                             {item.name}
                           </Link>
-                          <p className="text-xs font-extrabold text-primary mt-0.5">${item.price}</p>
+                          <p className="text-xs font-extrabold text-primary mt-0.5">₹{item.price}</p>
                         </div>
                       </div>
                     ))}
@@ -715,7 +735,7 @@ function UserDashboardContent() {
                   value={addrName}
                   onChange={(e) => setAddrName(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none"
-                  placeholder="Sarah Connor"
+                  placeholder="Sai Sachidhanandam"
                 />
               </div>
               <div>
@@ -726,7 +746,7 @@ function UserDashboardContent() {
                   value={addrPhone}
                   onChange={(e) => setAddrPhone(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none"
-                  placeholder="+1 (555) 019-8234"
+                  placeholder="+91 94432 12345"
                 />
               </div>
               <div>
@@ -737,7 +757,7 @@ function UserDashboardContent() {
                   value={addrStreet}
                   onChange={(e) => setAddrStreet(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none"
-                  placeholder="Apartment 4B, 300 Castro St"
+                  placeholder="123 Botanical Avenue, Anna Nagar"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -749,7 +769,7 @@ function UserDashboardContent() {
                     value={addrCity}
                     onChange={(e) => setAddrCity(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none"
-                    placeholder="Mountain View"
+                    placeholder="Chennai / Coimbatore"
                   />
                 </div>
                 <div>
@@ -760,7 +780,7 @@ function UserDashboardContent() {
                     value={addrPincode}
                     onChange={(e) => setAddrPincode(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none"
-                    placeholder="94041"
+                    placeholder="600001"
                   />
                 </div>
               </div>
@@ -810,14 +830,15 @@ function UserDashboardContent() {
               {/* Header block */}
               <div className="flex justify-between items-start border-b border-slate-200 pb-6 gap-6">
                 <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight text-primary font-serif">NATURELLE</h2>
-                  <p className="text-xs text-slate-400 font-light mt-1">botanicals@lendorastore.com | +1 (800) 854-8290</p>
+                  <h2 className="text-2xl font-extrabold tracking-tight text-primary font-serif">VENUSS HERBO AROMATICS</h2>
+                  <p className="text-xs text-slate-400 font-light mt-1">contact@venussherbo.com | +91 94432 12345</p>
+                  <p className="text-[11px] text-slate-400 font-light">Erode / Karur Main Road, Tamil Nadu, India - 638111</p>
                 </div>
                 <div className="text-right">
-                  <h3 className="text-xl font-bold uppercase tracking-wide text-primary">GST INVOICE</h3>
+                  <h3 className="text-xl font-bold uppercase tracking-wide text-primary">GST TAX INVOICE</h3>
                   <p className="text-xs font-semibold text-primary mt-1">Invoice #{activeInvoiceOrder.id.substring(0, 8).toUpperCase()}</p>
-                  <p className="text-xs text-slate-400 font-light mt-0.5">Date: {new Date(activeInvoiceOrder.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs text-slate-400 font-light">Status: Paid (Direct UPI)</p>
+                  <p className="text-xs text-slate-400 font-light mt-0.5">Date: {new Date(activeInvoiceOrder.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-xs text-emerald-600 font-medium">Status: Paid (Direct UPI)</p>
                 </div>
               </div>
 
@@ -832,10 +853,10 @@ function UserDashboardContent() {
                 </div>
                 <div>
                   <h4 className="font-bold text-primary uppercase tracking-wider mb-2">Merchant Registration:</h4>
-                  <p className="font-semibold text-primary">NATURELLE HAIR CARE Premium Ltd</p>
-                  <p className="text-slate-500 mt-1">GSTIN: <span className="font-semibold text-slate-700">07AAAAA1111A1Z1</span></p>
-                  <p className="text-slate-500">Corporate Office: New Delhi, India</p>
-                  <p className="text-slate-400 mt-1">Payment Channel: QR Code scan verification</p>
+                  <p className="font-semibold text-primary">Venuss Herbo Aromatics Pvt Ltd</p>
+                  <p className="text-slate-500 mt-1">GSTIN: <span className="font-semibold text-slate-700">33AAAAA1234A1Z5</span></p>
+                  <p className="text-slate-500">Registered Office: Tamil Nadu, India</p>
+                  <p className="text-slate-400 mt-1">Payment Channel: UPI QR Code scan verification</p>
                 </div>
               </div>
 
@@ -892,7 +913,7 @@ function UserDashboardContent() {
               </div>
 
               <div className="mt-16 text-center text-[10px] text-slate-400 font-light border-t border-slate-100 pt-4 leading-relaxed">
-                This is a computer-generated GST Compliant tax invoice. No signature required. Thank you for scanning & shopping with LendoraStore.
+                This is a computer-generated GST Compliant tax invoice. No signature required. Thank you for choosing Venuss Herbo Aromatics.
               </div>
 
             </div>

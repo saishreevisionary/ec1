@@ -134,14 +134,15 @@ export default function AdminInvoices() {
               {/* Header block */}
               <div className="flex justify-between items-start border-b border-slate-200 pb-6 gap-6">
                 <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight text-primary font-serif">NATURELLE</h2>
-                  <p className="text-xs text-slate-400 font-light mt-1">botanicals@lendorastore.com | +1 (800) 854-8290</p>
+                  <h2 className="text-2xl font-extrabold tracking-tight text-primary font-serif">VENUSS HERBO AROMATICS</h2>
+                  <p className="text-xs text-slate-400 font-light mt-1">contact@venussherbo.com | +91 94432 12345</p>
+                  <p className="text-[11px] text-slate-400 font-light">Erode / Karur Main Road, Tamil Nadu, India - 638111</p>
                 </div>
                 <div className="text-right">
                   <h3 className="text-xl font-bold uppercase tracking-wide text-primary">GST TAX INVOICE</h3>
                   <p className="text-xs font-semibold text-primary mt-1">Invoice #{activeInvoice.invoice_number.toUpperCase()}</p>
-                  <p className="text-xs text-slate-400 font-light mt-0.5">Date: {new Date(activeInvoice.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs text-slate-400 font-light">Status: Paid (UPI QR-Verify)</p>
+                  <p className="text-xs text-slate-400 font-light mt-0.5">Date: {new Date(activeInvoice.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-xs text-emerald-600 font-medium">Status: Paid (UPI QR-Verify)</p>
                 </div>
               </div>
 
@@ -156,9 +157,9 @@ export default function AdminInvoices() {
                 </div>
                 <div>
                   <h4 className="font-bold text-primary uppercase tracking-wider mb-2">Merchant Registration:</h4>
-                  <p className="font-semibold text-primary">NATURELLE HAIR CARE Premium Ltd</p>
-                  <p className="text-slate-500 mt-1">GSTIN: <span className="font-semibold text-slate-700">07AAAAA1111A1Z1</span></p>
-                  <p className="text-slate-500">Corporate Office: New Delhi, India</p>
+                  <p className="font-semibold text-primary">Venuss Herbo Aromatics Pvt Ltd</p>
+                  <p className="text-slate-500 mt-1">GSTIN: <span className="font-semibold text-slate-700">33AAAAA1234A1Z5</span></p>
+                  <p className="text-slate-500">Registered Office: Tamil Nadu, India</p>
                   <p className="text-slate-400 mt-1">Transaction Ref: Direct UPI Settlement</p>
                 </div>
               </div>
@@ -216,7 +217,7 @@ export default function AdminInvoices() {
               </div>
 
               <div className="mt-16 text-center text-[10px] text-slate-400 font-light border-t border-slate-100 pt-4 leading-relaxed">
-                This is a computer-generated GST Tax Invoice. No signature required. Thank you for scanning & shopping with NATURELLE.
+                This is a computer-generated GST Tax Invoice. No signature required. Thank you for choosing Venuss Herbo Aromatics.
               </div>
 
             </div>

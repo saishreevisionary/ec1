@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { QrCode, UploadCloud, CheckCircle, ArrowRight, ShieldCheck, CreditCard, Landmark } from 'lucide-react';
+import { QrCode, UploadCloud, CheckCircle, ArrowRight, ShieldCheck, CreditCard, Landmark, Copy, Check } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { db } from '@/lib/db';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, subtotal, gstAmount, grandTotal, clearCart } = useCart();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Shipping Form States
   const [name, setName] = useState('');
@@ -26,12 +28,13 @@ export default function CheckoutPage() {
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   // Settings
   const [qrSettings, setQrSettings] = useState({
-    company_name: "LendoraStore Premium Ltd",
-    upi_id: "lendorastore@upi",
-    instructions: "Please open any UPI enabled payment app. Scan the QR code, verify the amount matches your order grand total, and submit the payment. Take a screenshot of the successful transaction and upload it below to verify your order."
+    company_name: "Venuss Herbo Aromatics Pvt Ltd",
+    upi_id: "venussherbo@upi",
+    instructions: "Please open any UPI enabled payment app (Google Pay, PhonePe, Paytm, BHIM). Scan the QR code or copy the UPI ID, enter the exact grand total, and complete the transfer. Upload your payment screenshot below to confirm your order."
   });
 
   // Flow State
@@ -46,9 +49,21 @@ export default function CheckoutPage() {
     }
 
     // Pre-populate fields if user is logged in
-    if (user) {
-      setName(user.name || '');
-    }
+    const loadUserData = async () => {
+      if (user) {
+        setName(user.name || '');
+        const addrs = await db.getAddresses(user.id);
+        const defaultAddr = addrs.find((a: any) => a.is_default) || addrs[0];
+        if (defaultAddr) {
+          if (!name) setName(defaultAddr.name || user.name || '');
+          setPhone(defaultAddr.phone || '');
+          setAddress(defaultAddr.street_address || '');
+          setCity(defaultAddr.city || '');
+          setPincode(defaultAddr.pincode || '');
+        }
+      }
+    };
+    loadUserData();
 
     const loadSettings = async () => {
       const qrs = await db.getSetting('qr_settings', qrSettings);
@@ -57,38 +72,65 @@ export default function CheckoutPage() {
     loadSettings();
   }, [cart, user, isSuccess]);
 
-  // Handle Mock Screenshot Upload
+  // Handle Screenshot Upload — store as base64 in localStorage
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setScreenshot(file);
-      setScreenshotPreview(URL.createObjectURL(file));
-      
-      // Simulate file upload progress
       setUploadProgress(0);
-      const timer = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(timer);
-            return 100;
-          }
-          return prev + 20;
-        });
-      }, 100);
+
+      // Read file as base64 data URL
+      const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        setScreenshotPreview(dataUrl);
+        setUploadProgress(100);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCopyUpi = () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(qrSettings.upi_id);
+      setCopiedUpi(true);
+      showToast(`Copied UPI ID "${qrSettings.upi_id}" to clipboard`);
+      setTimeout(() => setCopiedUpi(false), 2500);
     }
   };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone || !address || !city || !pincode) {
-      alert("Please fill in all shipping details.");
+      showToast("Please fill in all shipping details.");
+      return;
+    }
+
+    if (!screenshotPreview) {
+      showToast("Please upload your UPI payment screenshot to confirm the order.");
       return;
     }
 
     setIsSubmitting(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Small delay for UX feedback
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Store screenshot base64 in localStorage (keyed by a temp ID)
+    const screenshotKey = `venuss_payment_screenshot_${Date.now()}`;
+    if (typeof window !== 'undefined' && screenshotPreview.startsWith('data:')) {
+      try {
+        localStorage.setItem(screenshotKey, screenshotPreview);
+      } catch (e) {
+        // localStorage quota exceeded — proceed without storing (screenshot may be too large)
+        console.warn('Could not store screenshot in localStorage:', e);
+      }
+    }
 
     const orderData = {
       user_id: user?.id || 'anonymous-customer',
@@ -101,7 +143,8 @@ export default function CheckoutPage() {
       shipping_city: city,
       shipping_pincode: pincode,
       payment_method: 'qr_code',
-      payment_screenshot_url: screenshotPreview || 'mock-screenshot-receipt.png'
+      // Store the localStorage key reference (or a trimmed data URL for local orders)
+      payment_screenshot_url: screenshotKey
     };
 
     const orderItems = cart.map(item => ({
@@ -116,9 +159,10 @@ export default function CheckoutPage() {
       const order = await db.createOrder(orderData, orderItems);
       setCreatedOrderId(order.id);
       setIsSuccess(true);
+      showToast("Order placed successfully! We'll verify your payment.");
       clearCart();
     } catch (err) {
-      alert("Error submitting order. Please try again.");
+      showToast("Error submitting order. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -282,9 +326,23 @@ export default function CheckoutPage() {
                     </svg>
                   </div>
                   
-                  <span className="text-[10px] font-bold text-primary mt-3 uppercase tracking-wider">
-                    {qrSettings.upi_id}
-                  </span>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[11px] font-mono font-bold text-[#132A1C] uppercase tracking-wider">
+                      {qrSettings.upi_id}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="p-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#2E5E3E] transition-colors"
+                      title="Copy UPI ID"
+                    >
+                      {copiedUpi ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* QR Details */}

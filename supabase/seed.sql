@@ -2,7 +2,7 @@
 
 -- 1. SEED CATEGORIES
 INSERT INTO public.categories (id, name, slug, description, image_url) VALUES
-(1, 'Botanical Oils', 'botanical-oils', 'Nourishing, cold-pressed scalp and hair elixirs with rich natural lipids.', 'https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop'),
+(1, 'Botanical Oils', 'botanical-oils', 'Nourishing, cold-pressed scalp and hair elixirs with rich natural lipids.', '/images/botanical-hero.jpg'),
 (2, 'Active Serums', 'active-serums', 'Molecular peptide treatments formulated to activate growth and repair bonds.', 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop'),
 (3, 'Hair Mists', 'hair-mists', 'Lightweight ambient hydrates that provide UV defense and delicate scent trails.', 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop'),
 (4, 'Scalp Therapy', 'scalp-therapy', 'Soothing tonics, clay scrubs, and salicylic exfoliators for the root ecosystem.', 'https://images.unsplash.com/photo-1615396879814-490192568c37?q=80&w=600&auto=format&fit=crop'),

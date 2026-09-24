@@ -21,13 +21,10 @@ export default function AdminLayout({
   const { user, logout, isAdmin, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    // If auth finishes loading and user is not admin, redirect or block
-    if (!isLoading && !user) {
-      // Mock log in as admin for direct developer inspection ease
-      // console.log("No session found, login default admin");
-    }
-  }, [user, isLoading]);
+  // Allow /admin/login to render its own full-page UI without sidebar or admin guards
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
@@ -40,44 +37,33 @@ export default function AdminLayout({
   // Security Check: Block if not admin
   if (!user || user.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
-        <div className="p-4 bg-red-50 text-red-500 rounded-full w-fit mb-5 border border-red-100 shadow-sm">
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-6 text-center">
+        <div className="p-4 bg-red-500/10 text-red-400 rounded-2xl w-fit mb-5 border border-red-500/20 shadow-xl">
           <ShieldAlert className="w-12 h-12" />
         </div>
-        <h1 className="text-3xl font-extrabold text-primary tracking-tight">Access Denied</h1>
-        <p className="text-sm text-slate-500 font-light mt-2 max-w-sm leading-relaxed">
-          You do not have administrative privileges to access the backend console. Please authenticate with an admin email.
+        <h1 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight text-white">
+          Admin Access Required
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-400 font-light mt-2 max-w-sm leading-relaxed">
+          The administrative control panel is restricted to authorized store operators. Please sign in with an administrator account.
         </p>
         
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => {
-              // Sign in as default admin for instant validation
-              logout();
-              dbLoginAdmin();
-            }}
-            className="px-6 py-3 bg-primary text-white hover:bg-primary-light rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
+          <Link
+            href={`/admin/login?from=${encodeURIComponent(pathname)}`}
+            className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white hover:from-emerald-500 hover:to-teal-600 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-950/40 transition-all"
           >
-            Sign In as Admin
-          </button>
+            Sign In to Admin Console
+          </Link>
           <Link
             href="/"
-            className="px-6 py-3 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider"
+            className="px-6 py-3 border border-slate-800 text-slate-400 bg-slate-900/60 hover:bg-slate-900 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
           >
-            Store Front
+            Return to Storefront
           </Link>
         </div>
       </div>
     );
-  }
-
-  // Dx Helper: login admin
-  function dbLoginAdmin() {
-    if (typeof window !== 'undefined') {
-      const defaultAdmin = { id: 'admin-uuid', email: 'admin@venuss.co.in', name: 'Alexander Wright', role: 'admin', created_at: new Date().toISOString() };
-      localStorage.setItem('lendorastore_session', JSON.stringify(defaultAdmin));
-      router.refresh();
-    }
   }
 
   const navLinks = [
@@ -96,10 +82,10 @@ export default function AdminLayout({
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row w-full font-sans">
       
       {/* MOBILE BAR */}
-      <div className="lg:hidden flex items-center justify-between bg-primary text-white px-5 py-4 w-full shadow-md z-30">
-        <Link href="/" className="text-lg font-bold tracking-tight flex items-center gap-1.5">
-          <span className="w-2 h-5 bg-accent rounded-full transform -rotate-12 inline-block"></span>
-          <span>NATURELLE<span className="font-light text-slate-300">Admin</span></span>
+      <div className="lg:hidden flex items-center justify-between bg-[#132A1C] text-white px-5 py-4 w-full shadow-md z-30">
+        <Link href="/admin" className="text-sm font-serif font-bold tracking-wider flex items-center gap-2">
+          <span className="w-2 h-5 bg-[#D4954B] rounded-full inline-block"></span>
+          <span>VENUSS <span className="font-sans font-light text-emerald-300 text-xs">Admin</span></span>
         </Link>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -110,14 +96,14 @@ export default function AdminLayout({
       </div>
 
       {/* SIDEBAR NAVIGATION (Desktop & Drawer Mobile) */}
-      <aside className={`fixed inset-y-0 left-0 bg-primary text-white w-64 p-6 flex flex-col z-40 transform transition-transform duration-300 ease-out lg:translate-x-0 lg:static lg:h-screen ${
+      <aside className={`fixed inset-y-0 left-0 bg-[#132A1C] text-white w-64 p-6 flex flex-col z-40 transform transition-transform duration-300 ease-out lg:translate-x-0 lg:static lg:h-screen ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Brand Header */}
-        <div className="mb-10 hidden lg:flex items-center justify-between">
-          <Link href="/" className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
-            <span className="w-2.5 h-6 bg-accent rounded-full transform -rotate-12 inline-block"></span>
-            <span>NATURELLE<span className="text-accent font-light">Admin</span></span>
+        <div className="mb-8 hidden lg:flex items-center justify-between">
+          <Link href="/admin" className="text-base font-serif font-bold tracking-wider text-white flex items-center gap-2">
+            <span className="w-2 h-5 bg-[#D4954B] rounded-full inline-block"></span>
+            <span>VENUSS <span className="font-sans text-xs font-semibold text-emerald-400 uppercase tracking-widest block">Executive Console</span></span>
           </Link>
         </div>
 

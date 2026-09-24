@@ -38,18 +38,52 @@ const KEYS = {
   SETTINGS: 'lendorastore_settings',
   USERS: 'lendorastore_users',
   SESSION: 'lendorastore_session',
-  REVIEWS: 'lendorastore_reviews'
+  REVIEWS: 'lendorastore_reviews',
+  ADDRESSES: 'lendorastore_addresses',
 };
 
 // Initialize localStorage DB if empty
 const initLocalDb = () => {
   if (typeof window === 'undefined') return;
 
-  if (!localStorage.getItem(KEYS.CATEGORIES)) {
+  const existingCats = localStorage.getItem(KEYS.CATEGORIES);
+  if (!existingCats) {
     localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
+  } else {
+    try {
+      let cats: Category[] = JSON.parse(existingCats);
+      let changed = false;
+      cats = cats.map(c => {
+        if (c.slug === 'spice-powders' || c.id === 6 || c.image_url?.includes('photo-1615396879814')) {
+          changed = true;
+          return { ...c, image_url: '/images/spice-powders.jpg' };
+        }
+        if (c.image_url?.includes('photo-1608248597481')) {
+          changed = true;
+          return { ...c, image_url: '/images/botanical-hero.jpg' };
+        }
+        return c;
+      });
+      if (changed) {
+        localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(cats));
+      }
+    } catch {
+      localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
+    }
   }
-  if (!localStorage.getItem(KEYS.PRODUCTS)) {
+
+  const DB_CATALOG_VERSION = 'v6_reference_controlled';
+  const storedVersion = localStorage.getItem('venuss_catalog_version');
+
+  if (storedVersion !== DB_CATALOG_VERSION) {
     localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(PRODUCTS));
+    localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
+    localStorage.setItem('venuss_catalog_version', DB_CATALOG_VERSION);
+  } else {
+    const existingProds = localStorage.getItem(KEYS.PRODUCTS);
+    if (!existingProds) {
+      localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(PRODUCTS));
+    }
   }
   if (!localStorage.getItem(KEYS.SETTINGS)) {
     const defaultSettings = [
@@ -149,11 +183,23 @@ const setLocal = <T>(key: string, value: T): void => {
 export const db = {
   // --- CATEGORIES ---
   async getCategories(): Promise<Category[]> {
+    let cats: Category[];
     if (supabase) {
       const { data, error } = await supabase.from('categories').select('*').order('id');
-      if (!error && data) return data;
+      if (!error && data) {
+        cats = data;
+      } else {
+        cats = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+      }
+    } else {
+      cats = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
     }
-    return getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+    return cats.map(c => {
+      if (c.slug === 'spice-powders' || c.id === 6 || c.image_url?.includes('photo-1615396879814')) {
+        return { ...c, image_url: '/images/spice-powders.jpg' };
+      }
+      return c;
+    });
   },
 
   async saveCategory(category: Partial<Category>): Promise<Category> {
@@ -429,15 +475,16 @@ export const db = {
     return newOrder;
   },
 
-  async updateOrderStatus(id: string, status: string): Promise<any> {
+  async updateOrderStatus(id: string, status: string, extraData?: { tracking_number?: string; courier_name?: string; cancellation_reason?: string; payment_verified?: boolean }): Promise<any> {
+    const updatePayload: any = { status, ...(extraData || {}) };
     if (supabase) {
-      const { data, error } = await supabase.from('orders').update({ status }).eq('id', id).select().single();
+      const { data, error } = await supabase.from('orders').update(updatePayload).eq('id', id).select().single();
       if (!error && data) return data;
     }
     const orders = getLocal<any[]>(KEYS.ORDERS, []);
     const idx = orders.findIndex(o => o.id === id);
     if (idx !== -1) {
-      orders[idx].status = status;
+      orders[idx] = { ...orders[idx], ...updatePayload };
       setLocal(KEYS.ORDERS, orders);
       return orders[idx];
     }
@@ -478,12 +525,29 @@ export const db = {
     return getLocal<any | null>(KEYS.SESSION, null);
   },
 
+  syncSessionCookies(user: any | null): void {
+    if (typeof document === 'undefined') return;
+    if (user) {
+      document.cookie = `venuss_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `venuss_session=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=604800; SameSite=Lax`;
+    } else {
+      document.cookie = `venuss_role=; path=/; max-age=0; SameSite=Lax`;
+      document.cookie = `venuss_session=; path=/; max-age=0; SameSite=Lax`;
+    }
+  },
+
   login(email: string, role?: 'admin' | 'customer'): any {
     const users = getLocal<any[]>(KEYS.USERS, []);
     let user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
-      const determinedRole = role || (email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer');
+      const determinedRole = role || (
+        email.toLowerCase() === 'admin@venuss.co.in' || 
+        email.toLowerCase() === 'admin@lendorastore.com' || 
+        email.toLowerCase().includes('admin') 
+          ? 'admin' 
+          : 'customer'
+      );
       user = {
         id: determinedRole === 'admin' ? 'admin-uuid' : crypto.randomUUID(),
         email: email,
@@ -496,6 +560,7 @@ export const db = {
     }
     
     setLocal(KEYS.SESSION, user);
+    this.syncSessionCookies(user);
     return user;
   },
 
@@ -503,14 +568,25 @@ export const db = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(KEYS.SESSION);
     }
+    this.syncSessionCookies(null);
   },
 
   register(email: string, name: string): any {
     const users = getLocal<any[]>(KEYS.USERS, []);
     const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) return exists;
+    if (exists) {
+      setLocal(KEYS.SESSION, exists);
+      this.syncSessionCookies(exists);
+      return exists;
+    }
 
-    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
+    const determinedRole = (
+      email.toLowerCase() === 'admin@venuss.co.in' || 
+      email.toLowerCase() === 'admin@lendorastore.com' || 
+      email.toLowerCase().includes('admin') 
+        ? 'admin' 
+        : 'customer'
+    );
 
     const newUser = {
       id: crypto.randomUUID(),
@@ -522,7 +598,13 @@ export const db = {
     users.push(newUser);
     setLocal(KEYS.USERS, users);
     setLocal(KEYS.SESSION, newUser);
+    this.syncSessionCookies(newUser);
     return newUser;
+  },
+
+  switchRole(targetRole: 'admin' | 'customer'): any {
+    const targetEmail = targetRole === 'admin' ? 'admin@venuss.co.in' : 'customer@venuss.co.in';
+    return this.login(targetEmail, targetRole);
   },
 
   // --- REVIEWS ---
@@ -614,5 +696,123 @@ export const db = {
     const filtered = reviews.filter(r => r.id !== id);
     setLocal(KEYS.REVIEWS, filtered);
     return true;
-  }
+  },
+
+  // --- ADDRESSES ---
+  async getAddresses(userId: string): Promise<any[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('addresses')
+          .select('*')
+          .eq('user_id', userId)
+          .order('is_default', { ascending: false });
+        if (!error && data) return data;
+      } catch (err) {
+        console.warn('[db.getAddresses] Supabase error, falling back to local', err);
+      }
+    }
+    return getLocal<any[]>(`${KEYS.ADDRESSES}_${userId}`, []);
+  },
+
+  async saveAddress(userId: string, address: any): Promise<any> {
+    const isNew = !address.id;
+    const addr = {
+      ...address,
+      id: address.id || crypto.randomUUID(),
+      user_id: userId,
+      created_at: address.created_at || new Date().toISOString(),
+    };
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('addresses')
+          .upsert(addr)
+          .select()
+          .single();
+        if (!error && data) {
+          // Also update local cache
+          const addresses = getLocal<any[]>(`${KEYS.ADDRESSES}_${userId}`, []);
+          const idx = addresses.findIndex(a => a.id === data.id);
+          if (idx !== -1) addresses[idx] = data;
+          else addresses.push(data);
+          setLocal(`${KEYS.ADDRESSES}_${userId}`, addresses);
+          return data;
+        }
+      } catch (err) {
+        console.warn('[db.saveAddress] Supabase error, falling back to local', err);
+      }
+    }
+
+    // Local fallback
+    const addresses = getLocal<any[]>(`${KEYS.ADDRESSES}_${userId}`, []);
+    const idx = addresses.findIndex(a => a.id === addr.id);
+    if (idx !== -1) {
+      addresses[idx] = addr;
+    } else {
+      addresses.push(addr);
+    }
+    setLocal(`${KEYS.ADDRESSES}_${userId}`, addresses);
+    return addr;
+  },
+
+  async deleteAddress(userId: string, addressId: string): Promise<boolean> {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('addresses').delete().eq('id', addressId);
+        if (!error) {
+          const addresses = getLocal<any[]>(`${KEYS.ADDRESSES}_${userId}`, []);
+          setLocal(`${KEYS.ADDRESSES}_${userId}`, addresses.filter(a => a.id !== addressId));
+          return true;
+        }
+      } catch (err) {
+        console.warn('[db.deleteAddress] Supabase error, falling back to local', err);
+      }
+    }
+    const addresses = getLocal<any[]>(`${KEYS.ADDRESSES}_${userId}`, []);
+    setLocal(`${KEYS.ADDRESSES}_${userId}`, addresses.filter(a => a.id !== addressId));
+    return true;
+  },
+
+  // --- USER PROFILE ---
+  async updateUserProfile(userId: string, updates: { name?: string; email?: string }): Promise<any> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .update(updates)
+          .eq('id', userId)
+          .select()
+          .single();
+        if (!error && data) {
+          // Update local session
+          const session = getLocal<any>(KEYS.SESSION, null);
+          if (session && session.id === userId) {
+            const updated = { ...session, ...updates };
+            setLocal(KEYS.SESSION, updated);
+            this.syncSessionCookies(updated);
+          }
+          return data;
+        }
+      } catch (err) {
+        console.warn('[db.updateUserProfile] Supabase error, falling back to local', err);
+      }
+    }
+    // Local fallback
+    const users = getLocal<any[]>(KEYS.USERS, []);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], ...updates };
+      setLocal(KEYS.USERS, users);
+    }
+    const session = getLocal<any>(KEYS.SESSION, null);
+    if (session && session.id === userId) {
+      const updated = { ...session, ...updates };
+      setLocal(KEYS.SESSION, updated);
+      this.syncSessionCookies(updated);
+      return updated;
+    }
+    return users[idx] || null;
+  },
 };

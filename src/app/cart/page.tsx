@@ -1,14 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShoppingCart, ShieldCheck, Leaf } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShoppingCart, ShieldCheck, Leaf, Tag, Truck, Sparkles, Check } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, subtotal, gstAmount, grandTotal, totalItems } = useCart();
+  const { showToast } = useToast();
+
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  const FREE_SHIPPING_THRESHOLD = 999;
+  const effectiveTotal = Math.max(0, grandTotal - discountAmount);
+  const amountNeeded = Math.max(0, FREE_SHIPPING_THRESHOLD - effectiveTotal);
+  const progressPercent = Math.min(100, Math.round((effectiveTotal / FREE_SHIPPING_THRESHOLD) * 100));
+
+  const handleApplyPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = promoCode.trim().toUpperCase();
+    if (code === 'BOTANICAL10' || code === 'HERBO10') {
+      const discount = Math.round(subtotal * 0.10);
+      setDiscountAmount(discount);
+      setAppliedPromo(code);
+      showToast(`🎉 Promo code "${code}" applied! 10% discount added.`);
+    } else if (code === 'WELCOME50') {
+      const discount = 50;
+      setDiscountAmount(discount);
+      setAppliedPromo(code);
+      showToast(`🎉 Promo code "${code}" applied! ₹50 off.`);
+    } else {
+      showToast('Invalid promo code. Try "BOTANICAL10" for 10% off.');
+    }
+  };
 
   return (
     <>
@@ -186,12 +215,63 @@ export default function CartPage() {
             </div>
 
             {/* Right Col: Summary card */}
-            <div className="lg:col-span-4 bg-slate-50 border border-slate-200/50 p-6 rounded-2xl space-y-6">
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider border-b border-slate-200/60 pb-3">
+            <div className="lg:col-span-4 bg-white border border-slate-200/80 p-6 rounded-3xl space-y-6 shadow-sm">
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wider border-b border-slate-100 pb-3 font-serif">
                 Order Summary
               </h3>
 
-              <div className="space-y-3.5 text-xs font-light text-slate-500">
+              {/* Free Shipping Progress Meter */}
+              <div className="p-4 bg-[#E8EFE9] rounded-2xl space-y-2 border border-[#2E5E3E]/15">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[#173F2C] flex items-center gap-1.5 text-[11px]">
+                    <Truck className="w-3.5 h-3.5 text-[#2E5E3E]" />
+                    {amountNeeded === 0 ? (
+                      <span className="text-emerald-700 font-bold">Free Express Delivery Unlocked!</span>
+                    ) : (
+                      <span>Add <strong className="text-[#D48B38]">₹{amountNeeded}</strong> more for Free Shipping</span>
+                    )}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500">{progressPercent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#2E5E3E] to-[#D4954B] transition-all duration-500 rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Promo Code Input */}
+              <form onSubmit={handleApplyPromo} className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-[#2E5E3E]" />
+                  <span>Promotional Voucher</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. BOTANICAL10"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs uppercase font-mono tracking-wider focus:outline-none focus:ring-1 focus:ring-[#2E5E3E]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {appliedPromo && (
+                  <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Promo "{appliedPromo}" active (-₹{discountAmount})</span>
+                  </p>
+                )}
+              </form>
+
+              {/* Cost Calculations */}
+              <div className="space-y-3 text-xs font-light text-slate-500 border-t border-slate-100 pt-4">
                 <div className="flex justify-between">
                   <span>Cart Items Subtotal</span>
                   <span className="font-semibold text-primary">₹{subtotal}</span>
@@ -200,29 +280,37 @@ export default function CartPage() {
                   <span>GST Amount (18%)</span>
                   <span className="font-semibold text-primary">₹{gstAmount}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Voucher Discount</span>
+                    <span>-₹{discountAmount}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span>Standard Shipping</span>
-                  <span className="font-semibold text-emerald-600 uppercase tracking-wider text-[10px]">Free</span>
+                  <span>Express Dispatch</span>
+                  <span className="font-semibold text-emerald-700 uppercase tracking-wider text-[10px]">
+                    {amountNeeded === 0 ? 'Free' : 'Calculated at checkout'}
+                  </span>
                 </div>
                 
-                <div className="border-t border-slate-200/60 pt-4 flex justify-between text-sm font-extrabold text-primary">
+                <div className="border-t border-slate-200/60 pt-3 flex justify-between text-sm font-extrabold text-primary">
                   <span>Grand Total</span>
-                  <span>₹{grandTotal}</span>
+                  <span className="text-base text-[#2E5E3E]">₹{effectiveTotal}</span>
                 </div>
               </div>
 
               {/* Security message */}
-              <div className="p-3.5 bg-white border border-slate-200/60 rounded-xl flex gap-2.5 items-start">
-                <ShieldCheck className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+              <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl flex gap-2.5 items-start">
+                <ShieldCheck className="w-4 h-4 text-[#2E5E3E] flex-shrink-0 mt-0.5" />
                 <p className="text-[10px] text-slate-500 font-light leading-relaxed">
-                  GST invoices are automatically generated upon order confirmation and are available for download in your dashboard profile.
+                  GST invoices are automatically generated upon order confirmation and are available for download in your customer dashboard.
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1">
                 <Link
                   href="/checkout"
-                  className="w-full py-4 bg-accent hover:bg-accent-light text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-accent/15 active:scale-[0.98]"
+                  className="w-full py-3.5 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4" />
@@ -230,7 +318,7 @@ export default function CartPage() {
                 
                 <Link
                   href="/products"
-                  className="w-full py-3 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center transition-colors"
+                  className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center justify-center transition-colors"
                 >
                   Continue Shopping
                 </Link>
