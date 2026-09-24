@@ -114,7 +114,15 @@ export default function AdminCategoryManagement() {
           >
             {/* Header image */}
             <div className="h-32 bg-slate-100 relative">
-              <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+              <img 
+                src={cat.image_url} 
+                alt={cat.name} 
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.src = cat.slug === 'spice-powders' || cat.id === 6 ? '/images/spice-powders.jpg' : '/images/botanical-hero.jpg';
+                }}
+                className="w-full h-full object-cover" 
+              />
               <div className="absolute inset-0 bg-slate-900/40"></div>
               <h3 className="absolute bottom-4 left-4 text-base font-bold text-white tracking-wide capitalize">{cat.name}</h3>
             </div>

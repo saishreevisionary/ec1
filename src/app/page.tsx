@@ -21,16 +21,27 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import { ProductGridSkeleton } from '@/components/SkeletonCard';
+import GlobalLiveBackground from '@/components/hero/GlobalLiveBackground';
+import ProductBotanicalFrame from '@/components/ProductBotanicalFrame';
+import NewsletterBotanicalFrame from '@/components/NewsletterBotanicalFrame';
+import TrustValueCard from '@/components/TrustValueCard';
+import BrandIntro from '@/components/BrandIntro';
 import { db } from '@/lib/db';
 import { Product, Category, CATEGORIES } from '@/lib/seedData';
+import { useToast } from '@/context/ToastContext';
 
 export default function HomePage() {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [activeTab, setActiveTab] = useState<'bestsellers' | 'newarrivals' | 'trending'>('bestsellers');
+  const [newsletterEmail, setNewsletterEmail] = useState('');
 
   useEffect(() => {
     const loadHomeData = async () => {
+      setIsLoadingProducts(true);
       // Load categories
       const cats = await db.getCategories();
       setCategories(cats.length > 0 ? cats : CATEGORIES);
@@ -38,6 +49,7 @@ export default function HomePage() {
       // Load products
       const prods = await db.getProducts();
       setAllProducts(prods);
+      setIsLoadingProducts(false);
     };
 
     loadHomeData();
@@ -63,83 +75,136 @@ export default function HomePage() {
   const displayedProducts = getTabProducts();
 
   return (
-    <>
-      <Navbar />
+    <div className="homepage-shell relative min-h-screen isolation-isolate overflow-x-hidden">
+      {/* CINEMATIC BRAND INTRO OVERLAY (Plays once per browser session) */}
+      <BrandIntro />
 
-      <main className="flex-grow animate-fade-in bg-[#FAF9F5]">
-        {/* HERO SECTION GRID */}
-        <section className="px-4 sm:px-6 lg:px-8 pt-6 pb-12 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            
-            {/* LEFT SIDE: Main Hero Slide */}
-            <div className="lg:col-span-8 rounded-3xl bg-[#E4ECE5] p-8 sm:p-12 md:p-16 flex flex-col justify-between relative overflow-hidden shadow-sm border border-[#2E5E3E]/10 min-h-[480px]">
-              {/* Soft background glow */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-[#2E5E3E]/10 rounded-full blur-3xl -mr-16 -mt-16 animate-pulse"></div>
-              <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/40 rounded-full blur-2xl -ml-16 -mb-16"></div>
+      {/* GLOBAL FULL-PAGE LIVE BOTANICAL BACKGROUND */}
+      <GlobalLiveBackground />
 
-              {/* Top content */}
-              <div className="relative z-10 space-y-6 max-w-lg">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F2E9]/95 backdrop-blur-md text-[10px] uppercase font-bold tracking-widest text-[#2E5E3E] border border-[#2E5E3E]/20">
-                  <Sparkles className="w-3.5 h-3.5 text-[#D4954B]" />
-                  <span>Est. 1986 — Global Spice & Botanical Extracts</span>
-                </span>
+      <div className="homepage-content relative z-[10]">
+        <Navbar />
+
+        <main className="flex-grow animate-fade-in">
+          {/* HERO SECTION GRID */}
+          <section className="relative px-4 sm:px-6 lg:px-8 pt-6 pb-12 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch relative z-[1]">
+              
+              {/* LEFT SIDE: Main Hero Slide */}
+              <div className="lg:col-span-8 p-6 sm:p-8 md:p-10 lg:p-12 rounded-3xl bg-[#E4ECE5]/75 backdrop-blur-md shadow-sm border border-[#2E5E3E]/15 min-h-[480px]">
+                <div className="hero-content grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] gap-7 lg:gap-8 xl:gap-10 items-center w-full">
                 
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] text-[#2E5E3E] font-serif">
-                  VENUSS HERBO AROMATICS<br />
-                  <span className="italic font-serif font-normal text-[#D4954B]">"Nature, Extracted with Precision"</span>
-                </h1>
-                
-                <p className="text-xs sm:text-sm text-[#3A372E]/90 font-light leading-relaxed max-w-md">
-                  India's premier manufacturer and exporter of Essential Oils, Spice Oleoresins, Floral Absolutes, Floral Concretes, and Sterilized Spice Powders for global Flavor, Fragrance, Food, and Personal Care industries.
-                </p>
+                {/* Left Column: hero-copy */}
+                <div className="hero-copy relative z-[3] flex flex-col justify-between space-y-5 sm:space-y-6 max-w-[570px]">
+                  {/* Eyebrow badge */}
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F2E9]/95 backdrop-blur-md text-[10px] uppercase font-bold tracking-widest text-[#2E5E3E] border border-[#2E5E3E]/20 shadow-xs">
+                      <Sparkles className="w-3.5 h-3.5 text-[#D4954B]" />
+                      <span>Est. 1986 — Global Spice & Botanical Extracts</span>
+                    </span>
+                  </div>
+                  
+                  {/* Heading & Tagline */}
+                  <div className="space-y-2">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] text-[#173F2C] font-serif max-w-[540px]">
+                      VENUSS HERBO AROMATICS
+                    </h1>
+                    <p className="italic font-serif text-lg sm:text-xl md:text-2xl text-[#C7904A] font-normal leading-snug">
+                      "Nature, Extracted with Precision"
+                    </p>
+                  </div>
+                  
+                  {/* Description */}
+                  <p className="text-xs sm:text-sm text-[#234E3A]/90 font-light leading-relaxed max-w-[500px]">
+                    India's premier manufacturer and exporter of Essential Oils, Spice Oleoresins, Floral Absolutes, Floral Concretes, and Sterilized Spice Powders for global Flavor, Fragrance, Food, and Personal Care industries.
+                  </p>
 
-                <div className="pt-2 flex flex-wrap gap-3">
-                  <Link
-                    href="/products"
-                    className="px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md"
-                  >
-                    <span>EXPLORE CATALOG</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="px-6 py-3 bg-[#D48B38] hover:bg-[#BF7A2C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm"
-                  >
-                    REQUEST A QUOTE
-                  </Link>
-                </div>
-              </div>
+                  {/* CTA Buttons */}
+                  <div className="pt-1 flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/products"
+                      className="px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-95 flex items-center gap-2 shadow-md cursor-pointer"
+                    >
+                      <span>EXPLORE CATALOG</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                    <Link
+                      href="/contact"
+                      className="px-6 py-3 bg-[#D48B38] hover:bg-[#BF7A2C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-md active:scale-95 shadow-sm cursor-pointer"
+                    >
+                      REQUEST A QUOTE
+                    </Link>
+                  </div>
 
-              {/* Botanical extraction visual */}
-              <div className="hidden md:block absolute right-6 bottom-0 w-72 h-80 lg:w-80 lg:h-96">
-                <img
-                  src="https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=400&auto=format&fit=crop"
-                  alt="Venuss Herbo Botanical Extract"
-                  className="w-full h-full object-contain object-bottom drop-shadow-2xl opacity-90"
-                />
-              </div>
+                  {/* Desktop Trust Indicators (rendered inside left column on lg+ screens) */}
+                  <div className="hidden lg:grid pt-6 border-t border-[#2E5E3E]/20 grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">100% Pure Extracts</span>
+                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">Steam distilled & supercritical</span>
+                    </div>
+                    <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2.5 xl:pl-3">
+                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">Global Exporter</span>
+                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">Supplying 40+ countries</span>
+                    </div>
+                    <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2.5 xl:pl-3">
+                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">Quality Certified</span>
+                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">ISO, HACCP & FSSAI certified</span>
+                    </div>
+                  </div>
+                </div>
 
-              {/* Bottom badging summary */}
-              <div className="relative z-10 pt-8 border-t border-[#2E5E3E]/20 grid grid-cols-3 gap-2 mt-8">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#2E5E3E] block uppercase">100% Pure Extracts</span>
-                  <span className="text-[9px] text-[#3A372E]/70 block font-light">Steam distilled & supercritical</span>
+                {/* Right Column: hero-visual */}
+                <div className="hero-visual relative z-[2] w-full flex flex-col items-center justify-center">
+                  <div className="relative w-full max-w-[340px] sm:max-w-[380px] lg:max-w-none h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] xl:h-[410px] max-h-[430px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-[#2E5E3E]/20 bg-[#FAF9F5]/40 group">
+                    <img
+                      src="/images/botanical-hero.jpg"
+                      alt="Venuss Botanical Dropper Bottle & Herbal Extracts"
+                      className="w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-105"
+                    />
+                    
+                    {/* Subtle gradient overlay at bottom of card */}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#132A1C]/85 via-[#132A1C]/30 to-transparent p-3.5 sm:p-4 pt-10 flex flex-col justify-end">
+                      <span className="text-[10.5px] sm:text-[11px] font-bold text-white tracking-wider uppercase drop-shadow-xs">
+                        Pure Steam Distillation
+                      </span>
+                      <span className="text-[9px] text-emerald-200/90 font-light drop-shadow-xs">
+                        Malabar Cardamom & Botanical Elixirs
+                      </span>
+                    </div>
+
+                    {/* Floating Product Badge */}
+                    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#2E5E3E]/20 shadow-xs flex items-center gap-1.5 pointer-events-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D48B38] animate-pulse" />
+                      <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-[#173F2C]">
+                        100% Organic Extract
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-3">
-                  <span className="text-[10px] font-bold text-[#2E5E3E] block uppercase">Global Exporter</span>
-                  <span className="text-[9px] text-[#3A372E]/70 block font-light">Supplying 40+ countries</span>
+
+                {/* Mobile / Tablet Trust Indicators (renders below visual on screens < lg) */}
+                <div className="lg:hidden col-span-1 pt-5 border-t border-[#2E5E3E]/20 grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">100% Pure Extracts</span>
+                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">Steam distilled</span>
+                  </div>
+                  <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2">
+                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">Global Exporter</span>
+                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">40+ countries</span>
+                  </div>
+                  <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2">
+                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">Quality Certified</span>
+                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">ISO & HACCP</span>
+                  </div>
                 </div>
-                <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-3">
-                  <span className="text-[10px] font-bold text-[#2E5E3E] block uppercase">Quality Certified</span>
-                  <span className="text-[9px] text-[#3A372E]/70 block font-light">ISO, HACCP & FSSAI certified</span>
-                </div>
+
               </div>
             </div>
 
             {/* RIGHT SIDE: Two Promo Cards */}
             <div className="lg:col-span-4 flex flex-col gap-6">
               {/* Card 1: Spice Oleoresins */}
-              <div className="flex-1 rounded-3xl bg-[#F5F2E9] border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm">
+              <div className="flex-1 rounded-3xl bg-[#F5F2E9]/80 backdrop-blur-sm border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm transition-all duration-200 hover:scale-[1.01] hover:border-[#D4954B]/40 hover:shadow-md">
                 <div className="space-y-3 z-10 max-w-[60%]">
                   <h3 className="text-base font-extrabold text-[#2E5E3E] font-serif leading-snug">
                     Spice Oleoresins & Extracts
@@ -149,7 +214,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/products?category=spice-oleoresins"
-                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-colors shadow-sm"
+                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] shadow-sm"
                   >
                     View Oleoresins
                   </Link>
@@ -164,7 +229,7 @@ export default function HomePage() {
               </div>
 
               {/* Card 2: Floral Absolutes */}
-              <div className="flex-1 rounded-3xl bg-[#EBE7DC] border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm">
+              <div className="flex-1 rounded-3xl bg-[#EBE7DC]/80 backdrop-blur-sm border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm transition-all duration-200 hover:scale-[1.01] hover:border-[#D4954B]/40 hover:shadow-md">
                 <div className="space-y-3 z-10 max-w-[60%]">
                   <h3 className="text-base font-extrabold text-[#2E5E3E] font-serif leading-snug">
                     Floral Concretes & Absolutes
@@ -174,7 +239,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/products?category=floral-absolutes"
-                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-colors shadow-sm"
+                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] shadow-sm"
                   >
                     View Fine Florals
                   </Link>
@@ -193,8 +258,8 @@ export default function HomePage() {
         </section>
 
         {/* HORIZONTAL BUBBLE CATEGORIES SCROLL ROW */}
-        <section className="py-8 bg-white border-y border-[#2E5E3E]/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative py-8 bg-[#FAF9F5]/70 backdrop-blur-md border-y border-[#2E5E3E]/10 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
             <div className="flex items-center gap-6 overflow-x-auto pb-2 scrollbar-none hide-scrollbar justify-between">
               {categories.map((cat) => (
                 <Link
@@ -206,7 +271,15 @@ export default function HomePage() {
                     <img
                       src={cat.image_url}
                       alt={cat.name}
-                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (cat.slug === 'spice-powders' || cat.id === 6) {
+                          target.src = '/images/spice-powders.jpg';
+                        } else {
+                          target.src = '/images/botanical-hero.jpg';
+                        }
+                      }}
+                      className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500"
                     />
                   </div>
                   <span className="text-[11px] font-bold text-[#2E5E3E] mt-2 group-hover:text-[#D4954B] transition-colors uppercase">
@@ -238,10 +311,12 @@ export default function HomePage() {
         </section>
 
         {/* TABBED BEST SELLERS SECTION */}
-        <section id="bestsellers" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24">
+        <section id="bestsellers" className="relative py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24 overflow-visible">
+          {/* Art-Directed Editorial Botanical Frame around Product Grid */}
+          <ProductBotanicalFrame />
           
           {/* Header & Tabs */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-[#285338]/15 gap-4">
+          <div className="relative z-[10] flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-[#285338]/15 gap-4">
             <div className="flex items-center gap-2">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[#285338] tracking-tight font-serif flex items-center gap-2">
                 <span>Featured Botanical Products</span>
@@ -284,62 +359,28 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="relative z-[10] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Col: Product Grid (3/4 width) */}
             <div className="lg:col-span-9 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {displayedProducts.map((prod) => (
-                <ProductCard key={prod.id} product={prod} />
-              ))}
+              {isLoadingProducts ? (
+                <ProductGridSkeleton count={6} />
+              ) : (
+                displayedProducts.map((prod) => (
+                  <ProductCard key={prod.id} product={prod} />
+                ))
+              )}
             </div>
 
             {/* Right Col: Trust Badges (1/4 width) */}
-            <div className="lg:col-span-3 rounded-2xl bg-white border border-[#285338]/15 p-6 space-y-6 shadow-sm">
-              <div className="flex gap-4 items-start">
-                <div className="p-2.5 rounded-lg bg-[#FAF8F2] text-[#285338] border border-[#285338]/10 flex-shrink-0">
-                  <Award className="w-5 h-5 text-[#285338]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#285338] uppercase tracking-wider">Est. 1986</h4>
-                  <p className="text-[10px] text-slate-500 font-light mt-1">40+ years extraction expertise</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start border-t border-slate-100 pt-6">
-                <div className="p-2.5 rounded-lg bg-[#FAF8F2] text-[#285338] border border-[#285338]/10 flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-[#285338]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#285338] uppercase tracking-wider">ISO & HACCP Certified</h4>
-                  <p className="text-[10px] text-slate-500 font-light mt-1">Rigorous quality control lab</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start border-t border-slate-100 pt-6">
-                <div className="p-2.5 rounded-lg bg-[#FAF8F2] text-[#285338] border border-[#285338]/10 flex-shrink-0">
-                  <Truck className="w-5 h-5 text-[#285338]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#285338] uppercase tracking-wider">Global Logistics</h4>
-                  <p className="text-[10px] text-slate-500 font-light mt-1">Worldwide air & sea freight</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start border-t border-slate-100 pt-6">
-                <div className="p-2.5 rounded-lg bg-[#FAF8F2] text-[#285338] border border-[#285338]/10 flex-shrink-0">
-                  <Headphones className="w-5 h-5 text-[#285338]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#285338] uppercase tracking-wider">Direct Sales Support</h4>
-                  <p className="text-[10px] text-slate-500 font-light mt-1">Custom quotes & COA certificates</p>
-                </div>
-              </div>
+            <div className="lg:col-span-3 lg:sticky lg:top-24">
+              <TrustValueCard />
             </div>
           </div>
         </section>
 
         {/* DARK FOREST GREEN CORPORATE ASSURANCE BANNER */}
-        <section className="py-12 bg-[#285338] text-white w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <section className="relative py-12 bg-[#285338] text-white w-full overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-[1]">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/10 rounded-full border border-white/10">
                 <Award className="w-6 h-6 text-[#C88432]" />
@@ -383,8 +424,11 @@ export default function HomePage() {
         </section>
 
         {/* NEWSLETTER */}
-        <section className="py-20 max-w-4xl mx-auto px-4 text-center">
-          <div className="bg-white border border-slate-200/60 rounded-3xl p-8 sm:p-12 relative overflow-hidden shadow-sm">
+        <section className="relative py-20 max-w-4xl mx-auto px-4 text-center overflow-visible">
+          {/* Dedicated Botanical Margins for Newsletter Section */}
+          <NewsletterBotanicalFrame />
+
+          <div className="bg-white border border-slate-200/60 rounded-3xl p-8 sm:p-12 relative overflow-hidden shadow-sm z-[10]">
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-accent opacity-10 rounded-full blur-2xl"></div>
 
             <div className="relative z-10 space-y-4">
@@ -395,11 +439,28 @@ export default function HomePage() {
               <p className="text-sm text-slate-500 font-light max-w-md mx-auto leading-relaxed">
                 Subscribe to receive early access to new batches, science essays, and private collections. No spam, ever.
               </p>
-              <form onSubmit={(e) => { e.preventDefault(); alert("Subscribed! Thank you."); }} className="pt-4 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
+              <form onSubmit={(e) => { 
+                e.preventDefault();
+                if (newsletterEmail.trim()) {
+                  // Store subscription
+                  if (typeof window !== 'undefined') {
+                    const subs = JSON.parse(localStorage.getItem('venuss_newsletter_subscribers') || '[]');
+                    const already = subs.some((s: any) => s.email === newsletterEmail.trim());
+                    if (!already) {
+                      subs.push({ email: newsletterEmail.trim(), subscribed_at: new Date().toISOString() });
+                      localStorage.setItem('venuss_newsletter_subscribers', JSON.stringify(subs));
+                    }
+                  }
+                  showToast('Thank you for subscribing! You\'ll receive our botanical updates.', 'success');
+                  setNewsletterEmail('');
+                }
+              }} className="pt-4 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
                   placeholder="Enter your email"
                   required
+                  value={newsletterEmail}
+                  onChange={e => setNewsletterEmail(e.target.value)}
                   className="flex-grow px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 text-primary font-light"
                 />
                 <button
@@ -413,9 +474,10 @@ export default function HomePage() {
           </div>
         </section>
 
-      </main>
+        </main>
 
-      <Footer />
-    </>
+        <Footer />
+      </div>
+    </div>
   );
 }

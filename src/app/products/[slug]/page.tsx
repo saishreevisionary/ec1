@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter as useNextRouter, useParams as useNextParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, ShoppingBag, ArrowLeft, Plus, Minus, Check, Star, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Heart, ShoppingBag, ArrowLeft, Plus, Minus, Check, Star, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
@@ -12,14 +12,16 @@ import { db, Review } from '@/lib/db';
 import { Product } from '@/lib/seedData';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function ProductDetailsPage() {
   const params = useNextParams();
   const router = useNextRouter();
   const slug = params.slug as string;
 
-  const { addToCart, cart } = useCart();
+  const { addToCart, cart, openCartDrawer } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { showToast } = useToast();
 
   // Component states
   const [product, setProduct] = useState<Product | null>(null);
@@ -83,13 +85,13 @@ export default function ProductDetailsPage() {
       <>
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h2 className="text-2xl font-bold text-primary">Product Not Found</h2>
+          <h2 className="text-2xl font-bold text-primary font-serif">Botanical Product Not Found</h2>
           <p className="text-sm text-slate-400 font-light mt-1.5">
-            The premium hardware you are looking for does not exist or has been moved.
+            The botanical extract or essential oil you are looking for does not exist or has been moved.
           </p>
           <Link
             href="/products"
-            className="mt-6 inline-block px-6 py-3 bg-primary text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all"
+            className="mt-6 inline-block px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all shadow-sm"
           >
             Back to Catalog
           </Link>
@@ -115,7 +117,13 @@ export default function ProductDetailsPage() {
   const handleAddToCart = (e: React.MouseEvent) => {
     addToCart(product, qty);
     setIsAddedSuccess(true);
-    setTimeout(() => setIsAddedSuccess(false), 2000);
+    showToast(`Added ${qty} × "${product.name}" to cart`);
+    
+    // Open the luxury cart drawer
+    setTimeout(() => {
+      setIsAddedSuccess(false);
+      openCartDrawer();
+    }, 450);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
@@ -169,6 +177,7 @@ export default function ProductDetailsPage() {
 
     setReviewSubmitting(false);
     setReviewSubmittedNotice('Thank you! Your review has been published.');
+    showToast('Thank you! Your review has been published.');
     setShowWriteReview(false);
     setNewTitle('');
     setNewComment('');
@@ -402,29 +411,32 @@ export default function ProductDetailsPage() {
 
             {/* Quality Seals */}
             <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6">
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-light">
-                <ShieldCheck className="w-4 h-4 text-accent" />
-                <span>2 Year Guarantee</span>
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-light">
+                <ShieldCheck className="w-4 h-4 text-[#D4954B]" />
+                <span>100% Pure & GC-MS Tested</span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-light">
-                <RefreshCw className="w-4 h-4 text-accent" />
-                <span>30-Day Easy Return</span>
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-light">
+                <Truck className="w-4 h-4 text-[#2E5E3E]" />
+                <span>Ships in 24h from Tamil Nadu</span>
               </div>
             </div>
 
           </div>
         </div>
 
-        {/* BOTTOM SECTIONS: Description & Spec sheets */}
+        {/* BOTTOM SECTIONS: Botanical Extraction Details & Spec sheets */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-t border-slate-100 pt-12 mb-16">
           <div className="lg:col-span-7 space-y-6">
-            <h2 className="text-xl font-bold text-primary tracking-tight">Design & Features</h2>
+            <h2 className="text-xl font-bold text-primary tracking-tight font-serif">Botanical Extraction & Profile</h2>
             <p className="text-sm text-slate-600 font-light leading-relaxed whitespace-pre-line">
               {product.description}
             </p>
-            <p className="text-sm text-slate-600 font-light leading-relaxed">
-              Every detail is engineered with absolute precision. From structural stability and acoustic isolation to seam details in apparel, each feature undergoes rigorous material validation. Enjoy a product built for longevity, tactile refinement, and aesthetic harmony.
-            </p>
+            <div className="p-4 bg-[#E4ECE5]/50 border border-[#2E5E3E]/15 rounded-2xl space-y-2">
+              <span className="text-xs font-bold text-[#173F2C] uppercase tracking-wider block">Authenticity & Quality Monograph</span>
+              <p className="text-xs text-[#2E5E3E] font-light leading-relaxed">
+                Every single batch is steam-distilled or cold-pressed with supercritical botanical precision. From farm-level cultivation across the Western Ghats to analytical validation via gas chromatography-mass spectrometry (GC-MS), our extracts meet strict international pharmacopeia standards.
+              </p>
+            </div>
           </div>
 
           <div className="lg:col-span-5 space-y-4">

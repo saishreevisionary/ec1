@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Heart, ShoppingBag, User, LogOut, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff, Leaf, CheckCircle2, Beaker, Sun } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, LogOut, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff, Leaf, CheckCircle2, Beaker, Sun, Shield } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -12,7 +12,7 @@ const NavbarContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, logout, login, loginWithGoogle, register } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, openCartDrawer } = useCart();
   const { wishlist } = useWishlist();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,27 +137,28 @@ const NavbarContent = () => {
             </div>
 
             {/* Simple Clean Desktop Navigation Links */}
-            <nav id="tour-categories" className="hidden md:flex space-x-8 text-xs font-bold tracking-wider uppercase">
+            <nav id="tour-categories" className="hidden md:flex space-x-6 lg:space-x-8 text-xs font-bold tracking-wider uppercase">
               <Link href="/" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Home</Link>
               <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Shop</Link>
               <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Categories</Link>
               <Link href="/about" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">About</Link>
+              <Link href="/about" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Sustainability</Link>
               <Link href="/contact" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Contact</Link>
             </nav>
 
             {/* Search & Action Icons */}
             <div className="flex items-center space-x-4 sm:space-x-5">
               
-              {/* Search Bar */}
-              <form id="tour-search" onSubmit={handleSearchSubmit} className="hidden sm:flex relative border border-[#2E5E3E]/20 rounded-full overflow-hidden bg-white shadow-xs">
+              {/* Search Bar matching Reference Image */}
+              <form id="tour-search" onSubmit={handleSearchSubmit} className="hidden sm:flex items-center border border-[#254936]/18 rounded-full bg-white shadow-2xs pl-3.5 pr-1 py-1 focus-within:border-[#102C20] transition-colors">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search products, extracts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-32 lg:w-40 px-3.5 py-1 text-xs font-light focus:outline-none placeholder:text-slate-400 text-[#2E5E3E]"
+                  className="w-36 lg:w-48 text-xs font-normal focus:outline-none placeholder:text-[#5F7C5D]/60 text-[#102C20]"
                 />
-                <button type="submit" className="bg-[#2E5E3E] hover:bg-[#1F452C] text-white px-2.5 transition-colors flex items-center justify-center">
+                <button type="submit" className="w-7 h-7 rounded-full bg-[#102C20] hover:bg-[#1E4533] text-white transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-xs" title="Search">
                   <Search className="w-3.5 h-3.5" />
                 </button>
               </form>
@@ -179,8 +180,19 @@ const NavbarContent = () => {
                 </div>
               </Link>
 
-              {/* Account Button */}
-              <div id="tour-account" className="flex items-center">
+              {/* Account Button & Admin Pill */}
+              <div id="tour-account" className="flex items-center gap-2">
+                {user && user.role === 'admin' && (
+                  <Link 
+                    href="/admin" 
+                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#132A1C] text-[#D4954B] border border-[#D4954B]/30 rounded-full text-[10px] font-bold uppercase tracking-wider hover:bg-[#1a3825] transition-all shadow-xs"
+                    title="Administrative Control Panel"
+                  >
+                    <Shield className="w-3 h-3 text-[#D4954B]" />
+                    <span>Admin Console</span>
+                  </Link>
+                )}
+
                 {user ? (
                   <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-colors p-1" title="Account">
                     <User className="w-5 h-5 text-[#2E5E3E]" />
@@ -196,12 +208,13 @@ const NavbarContent = () => {
                 )}
               </div>
 
-              {/* Cart Button */}
-              <Link 
+              {/* Cart Button with Slide-out Drawer */}
+              <button 
                 id="tour-cart" 
-                href="/cart" 
-                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1"
-                title="Cart"
+                type="button"
+                onClick={openCartDrawer} 
+                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1 cursor-pointer"
+                title="View Cart"
               >
                 <div className="relative">
                   <ShoppingBag className="w-5 h-5 text-[#2E5E3E]" />
@@ -211,7 +224,7 @@ const NavbarContent = () => {
                     </span>
                   )}
                 </div>
-              </Link>
+              </button>
 
               {/* Mobile Menu Icon */}
               <button
@@ -241,11 +254,85 @@ const NavbarContent = () => {
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
             </form>
             <div className="flex flex-col space-y-2.5 font-bold text-xs uppercase tracking-wider text-[#2E5E3E]">
-              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Home</Link>
-              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Shop</Link>
-              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">Categories</Link>
-              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1 border-b border-slate-200/50">About</Link>
-              <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-1">Contact</Link>
+              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Home</Link>
+              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Shop Catalog</Link>
+              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">About Our Distilleries</Link>
+              <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Contact & Quotes</Link>
+              <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50 flex items-center justify-between">
+                <span>Saved Wishlist</span>
+                {wishlist.length > 0 && (
+                  <span className="px-2 py-0.5 bg-[#D4954B] text-white rounded-full text-[10px]">{wishlist.length}</span>
+                )}
+              </Link>
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  openCartDrawer();
+                }} 
+                className="hover:text-[#D4954B] py-2 border-b border-slate-200/50 flex items-center justify-between text-left w-full cursor-pointer uppercase font-bold text-xs"
+              >
+                <span>Shopping Cart</span>
+                {totalItems > 0 && (
+                  <span className="px-2 py-0.5 bg-[#2E5E3E] text-white rounded-full text-[10px]">{totalItems}</span>
+                )}
+              </button>
+
+              {/* User Account / Auth Mobile Section */}
+              <div className="pt-2 border-t border-[#2E5E3E]/15">
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 py-1 text-slate-600 normal-case font-normal text-xs">
+                      <User className="w-4 h-4 text-[#2E5E3E]" />
+                      <span className="font-semibold text-[#132A1C]">{user.name || user.email}</span>
+                    </div>
+                    {user.role === 'admin' && (
+                      <Link 
+                        href="/admin" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="flex items-center gap-2 py-1.5 text-[#D4954B] hover:text-[#b37936]"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Admin Console</span>
+                      </Link>
+                    )}
+                    <Link 
+                      href="/dashboard" 
+                      onClick={() => setIsMobileMenuOpen(false)} 
+                      className="block py-1 text-[#2E5E3E] hover:text-[#D4954B]"
+                    >
+                      My Dashboard & Orders
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="flex items-center gap-1.5 py-1 text-red-600 hover:text-red-700 text-xs font-semibold uppercase tracking-wider"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full text-center py-2.5 bg-[#2E5E3E] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs"
+                    >
+                      Sign In / Register
+                    </Link>
+                    <Link
+                      href="/admin/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-center py-1 text-[11px] text-slate-500 hover:text-slate-700 normal-case font-light"
+                    >
+                      Admin Portal Login
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -570,18 +657,45 @@ const NavbarContent = () => {
                   </div>
 
                   {/* Bottom Footer Switcher */}
-                  <div className="text-center pt-4 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegisterMode(!isRegisterMode);
-                        setErrorMsg('');
-                      }}
-                      className="text-xs font-semibold text-emerald-800 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>{isRegisterMode ? 'Already have an account? Sign in' : 'New here? Create an account'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                  <div className="text-center pt-4 border-t border-slate-100 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginEmail('customer@venuss.co.in');
+                          setPassword('••••••••');
+                        }}
+                        className="text-[11px] text-emerald-800 hover:text-emerald-950 font-semibold underline decoration-dotted"
+                      >
+                        ⚡ Fill Demo Customer
+                      </button>
+
+                      <Link
+                        href="/admin/login"
+                        onClick={() => setIsLoginModalOpen(false)}
+                        className="text-[11px] text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1"
+                      >
+                        <span>Admin Console</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRegisterMode(!isRegisterMode);
+                          setErrorMsg('');
+                        }}
+                        className="text-xs font-semibold text-emerald-800 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>
+                          {isRegisterMode
+                            ? 'Already have an account? Sign In'
+                            : "Don't have an account? Create one"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                 </>

@@ -14,10 +14,11 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string) => Promise<void>;
+  login: (email: string, role?: 'admin' | 'customer') => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   register: (email: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  switchRole: (role: 'admin' | 'customer') => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -26,6 +27,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchAndSetProfile = async (uid: string, email: string) => {
+    if (!supabase) return;
+    try {
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', uid)
+        .single();
+      
+      if (!error && profile) {
+        setUser(profile as User);
+        db.syncSessionCookies(profile);
+      } else {
+        const fallbackRole = (
+          email.toLowerCase() === 'admin@venuss.co.in' ||
+          email.toLowerCase() === 'admin@lendorastore.com' || 
+          email.toLowerCase().includes('admin') 
+            ? 'admin' 
+            : 'customer'
+        );
+        const fallbackUser: User = {
+          id: uid,
+          email: email,
+          name: email.split('@')[0].toUpperCase(),
+          role: fallbackRole,
+          created_at: new Date().toISOString()
+        };
+        setUser(fallbackUser);
+        db.syncSessionCookies(fallbackUser);
+      }
+    } catch (err) {
+      console.error("Error loading user profile:", err);
+    }
+  };
 
   // Load and listen to Supabase or Local sessions
   useEffect(() => {
@@ -39,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchAndSetProfile(session.user.id, session.user.email || '');
         } else {
           setUser(null);
+          db.syncSessionCookies(null);
         }
         setIsLoading(false);
       };
@@ -51,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchAndSetProfile(session.user.id, session.user.email || '');
         } else {
           setUser(null);
+          db.syncSessionCookies(null);
         }
         setIsLoading(false);
       });
@@ -63,49 +101,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const session = db.getCurrentSession();
       if (session) {
         setUser(session);
+        db.syncSessionCookies(session);
+      } else {
+        db.syncSessionCookies(null);
       }
       setIsLoading(false);
     }
   }, []);
 
-  const fetchAndSetProfile = async (uid: string, email: string) => {
-    if (!supabase) return;
-    try {
-      // Fetch user profile from the custom DB public.users table to get their true role (admin/customer)
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', uid)
-        .single();
-      
-      if (error) {
-        console.log(`[PROFILE_QUERY_ERROR] Code: ${error.code} | Message: ${error.message} | Details: ${error.details} | Hint: ${error.hint}`);
-      } else {
-        console.log("fetchAndSetProfile Success:", profile);
-      }
-      
-      if (!error && profile) {
-        setUser(profile as User);
-      } else {
-        // Fallback profile if sync trigger is delayed
-        setUser({
-          id: uid,
-          email: email,
-          name: email.split('@')[0].toUpperCase(),
-          role: email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer',
-          created_at: new Date().toISOString()
-        });
-      }
-    } catch (err) {
-      console.error("Error loading user profile:", err);
-    }
-  };
-
-  const login = async (email: string) => {
+  const login = async (email: string, role?: 'admin' | 'customer') => {
     setIsLoading(true);
-    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
+    const determinedRole = role || (
+      email.toLowerCase() === 'admin@venuss.co.in' ||
+      email.toLowerCase() === 'admin@lendorastore.com' || 
+      email.toLowerCase().includes('admin') 
+        ? 'admin' 
+        : 'customer'
+    );
     if (isSupabaseConfigured() && supabase) {
-      // Sign in / sign up via magic link
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
@@ -121,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         alert("A verification magic link has been sent to your email. Click it to log in.");
       }
     } else {
-      // Local storage fallback
       const sessionUser = db.login(email, determinedRole);
       setUser(sessionUser);
     }
@@ -140,15 +152,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         alert("Google Sign-In Error: " + error.message);
       }
     } else {
-      alert("Supabase is not configured yet. Simulating Google Sign-In with admin fallback.");
-      const sessionUser = db.login('admin@lendorastore.com', 'admin');
+      const sessionUser = db.login('admin@venuss.co.in', 'admin');
       setUser(sessionUser);
     }
   };
 
   const register = async (email: string, name: string) => {
     setIsLoading(true);
-    const determinedRole = email.toLowerCase() === 'admin@lendorastore.com' || email.toLowerCase() === 'ssv.ec1926@gmail.com' || email.toLowerCase().includes('admin') ? 'admin' : 'customer';
+    const determinedRole = (
+      email.toLowerCase() === 'admin@venuss.co.in' ||
+      email.toLowerCase() === 'admin@lendorastore.com' || 
+      email.toLowerCase().includes('admin') 
+        ? 'admin' 
+        : 'customer'
+    );
     if (isSupabaseConfigured() && supabase) {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -178,10 +195,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const switchRole = async (targetRole: 'admin' | 'customer') => {
+    setIsLoading(true);
+    const switchedUser = db.switchRole(targetRole);
+    setUser(switchedUser);
+    setIsLoading(false);
+  };
+
   const isAdmin = user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, register, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

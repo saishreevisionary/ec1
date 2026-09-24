@@ -23,6 +23,10 @@ interface CartContextType {
   subtotal: number;
   gstAmount: number;
   grandTotal: number;
+  isCartDrawerOpen: boolean;
+  setIsCartDrawerOpen: (open: boolean) => void;
+  openCartDrawer: () => void;
+  closeCartDrawer: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -30,6 +34,10 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+
+  const openCartDrawer = () => setIsCartDrawerOpen(true);
+  const closeCartDrawer = () => setIsCartDrawerOpen(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -128,7 +136,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         totalItems,
         subtotal: Math.round(subtotal * 100) / 100,
         gstAmount: Math.round(gstAmount * 100) / 100,
-        grandTotal: Math.round(grandTotal * 100) / 100
+        grandTotal: Math.round(grandTotal * 100) / 100,
+        isCartDrawerOpen,
+        setIsCartDrawerOpen,
+        openCartDrawer,
+        closeCartDrawer
       }}
     >
       {children}

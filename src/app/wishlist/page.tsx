@@ -7,14 +7,17 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const handleMoveToCart = (product: any, e: React.MouseEvent) => {
     addToCart(product, 1);
     removeFromWishlist(product.id);
+    showToast(`Added "${product.name}" to cart`);
     
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
@@ -26,6 +29,21 @@ export default function WishlistPage() {
           }
         })
       );
+    }
+  };
+
+  const handleAddAllToCart = () => {
+    let count = 0;
+    wishlist.forEach((product: any) => {
+      if (product.stock_quantity > 0) {
+        addToCart(product, 1);
+        count++;
+      }
+    });
+    if (count > 0) {
+      showToast(`Moved ${count} item${count > 1 ? 's' : ''} to cart`);
+    } else {
+      showToast('All items in wishlist are currently out of stock');
     }
   };
 
@@ -41,11 +59,22 @@ export default function WishlistPage() {
           <span className="text-primary font-normal">Wishlist</span>
         </div>
 
-        <div className="border-b border-slate-100 pb-6 mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Saved Wishlist</h1>
-          <p className="text-xs text-slate-500 font-light mt-1">
-            Review and manage items you've bookmarked for later.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary font-serif">Saved Wishlist</h1>
+            <p className="text-xs text-slate-500 font-light mt-1">
+              Review and manage items you've bookmarked for later. ({wishlist.length} item{wishlist.length !== 1 ? 's' : ''})
+            </p>
+          </div>
+          {wishlist.length > 0 && (
+            <button
+              onClick={handleAddAllToCart}
+              className="self-start sm:self-auto px-5 py-2.5 bg-[#2E5E3E] hover:bg-[#1f452c] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 active:scale-95"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>Add All to Cart</span>
+            </button>
+          )}
         </div>
 
         {wishlist.length === 0 ? (
@@ -181,7 +210,7 @@ export default function WishlistPage() {
                         {product.name}
                       </h3>
                       <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-sm font-extrabold text-primary">${product.price}</span>
+                        <span className="text-sm font-extrabold text-primary">₹{product.price}</span>
                         <span className="text-[9px] text-slate-400 font-light">+18% GST</span>
                       </div>
                     </div>
