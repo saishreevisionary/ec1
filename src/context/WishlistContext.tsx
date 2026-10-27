@@ -20,9 +20,13 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load wishlist from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('lendorastore_wishlist_list');
+      const stored = localStorage.getItem('lendorastore_wishlist_list') || localStorage.getItem('lendorastore_wishlist');
       if (stored) {
-        setWishlist(JSON.parse(stored));
+        try {
+          setWishlist(JSON.parse(stored));
+        } catch (e) {
+          console.warn('Failed to parse wishlist storage:', e);
+        }
       }
       setIsLoaded(true);
     }
@@ -31,7 +35,9 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Save wishlist to localStorage when it changes
   useEffect(() => {
     if (isLoaded && typeof window !== 'undefined') {
-      localStorage.setItem('lendorastore_wishlist_list', JSON.stringify(wishlist));
+      const serialized = JSON.stringify(wishlist);
+      localStorage.setItem('lendorastore_wishlist_list', serialized);
+      localStorage.setItem('lendorastore_wishlist', serialized);
     }
   }, [wishlist, isLoaded]);
 

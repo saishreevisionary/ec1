@@ -3,13 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter as useNextRouter, useParams as useNextParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, ShoppingBag, ArrowLeft, Plus, Minus, Check, Star, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
+import { 
+  Heart, 
+  ShoppingBag, 
+  ArrowLeft, 
+  Plus, 
+  Minus, 
+  Check, 
+  ShieldCheck, 
+  Truck, 
+  Leaf, 
+  FlaskConical, 
+  FileText, 
+  Sparkles, 
+  Package, 
+  ChevronRight,
+  ExternalLink,
+  MessageSquare,
+  Award
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
-import HairOilLoader from '@/components/HairOilLoader';
-import { db, Review } from '@/lib/db';
-import { Product } from '@/lib/seedData';
+import { db } from '@/lib/db';
+import { Product, Category, CATEGORIES } from '@/lib/seedData';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useToast } from '@/context/ToastContext';
@@ -19,50 +36,50 @@ export default function ProductDetailsPage() {
   const router = useNextRouter();
   const slug = params.slug as string;
 
-  const { addToCart, cart, openCartDrawer } = useCart();
+  const { addToCart, openCartDrawer } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { showToast } = useToast();
 
   // Component states
   const [product, setProduct] = useState<Product | null>(null);
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [activeImage, setActiveImage] = useState<string>('');
   const [qty, setQty] = useState<number>(1);
+  const [selectedPackaging, setSelectedPackaging] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [isAddedSuccess, setIsAddedSuccess] = useState<boolean>(false);
-
-  // Review states
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [showWriteReview, setShowWriteReview] = useState<boolean>(false);
-  const [newRating, setNewRating] = useState<number>(5);
-  const [newHoverRating, setNewHoverRating] = useState<number>(0);
-  const [newName, setNewName] = useState<string>('');
-  const [newEmail, setNewEmail] = useState<string>('');
-  const [newTitle, setNewTitle] = useState<string>('');
-  const [newComment, setNewComment] = useState<string>('');
-  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
-  const [reviewSubmittedNotice, setReviewSubmittedNotice] = useState<string>('');
 
   useEffect(() => {
     const loadProductDetails = async () => {
       setLoading(true);
-      const prod = await db.getProductBySlug(slug);
-      if (prod) {
-        setProduct(prod);
-        setActiveImage(prod.image_url);
-        
-        // Fetch approved reviews for this product
-        const prodReviews = await db.getReviews(prod.id, 'approved');
-        setReviews(prodReviews);
+      try {
+        const [prod, allCats, allProducts] = await Promise.all([
+          db.getProductBySlug(slug),
+          db.getCategories(),
+          db.getProducts()
+        ]);
 
-        // Fetch related products (same category, exclude current)
-        const allProducts = await db.getProducts();
-        const related = allProducts
-          .filter(p => p.category_id === prod.category_id && p.id !== prod.id)
-          .slice(0, 4);
-        setRelatedProducts(related);
+        if (allCats && allCats.length > 0) {
+          setCategories(allCats);
+        }
+
+        if (prod) {
+          setProduct(prod);
+          if (prod.packaging_options && prod.packaging_options.length > 0) {
+            setSelectedPackaging(prod.packaging_options[0]);
+          }
+          
+          // Fetch related products (same category, exclude current)
+          const related = allProducts
+            .filter(p => p.category_id === prod.category_id && p.id !== prod.id)
+            .slice(0, 4);
+          setRelatedProducts(related);
+        }
+      } catch (err) {
+        console.error('Failed to load product details:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     if (slug) {
@@ -72,40 +89,61 @@ export default function ProductDetailsPage() {
 
   if (loading) {
     return (
-      <>
+      <div className="min-h-screen bg-[#F7F4EA] flex flex-col font-sans">
         <Navbar />
-        <HairOilLoader fullPage size="md" />
+        <div className="flex-1 flex items-center justify-center py-24">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-3 border-[#173B2B]/20 border-t-[#173B2B] rounded-full animate-spin" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#173B2B]">
+              Loading Botanical Monograph...
+            </span>
+          </div>
+        </div>
         <Footer />
-      </>
+      </div>
     );
   }
 
   if (!product) {
     return (
-      <>
+      <div className="min-h-screen bg-[#F7F4EA] flex flex-col font-sans">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h2 className="text-2xl font-bold text-primary font-serif">Botanical Product Not Found</h2>
-          <p className="text-sm text-slate-400 font-light mt-1.5">
-            The botanical extract or essential oil you are looking for does not exist or has been moved.
+        <main className="flex-1 max-w-4xl mx-auto px-4 py-24 text-center">
+          <div className="w-16 h-16 rounded-full bg-[#DCE5D5] flex items-center justify-center mx-auto mb-4 border border-[#173B2B]/15 text-[#173B2B]">
+            <Leaf className="w-8 h-8 opacity-80" />
+          </div>
+          <h1 className="text-3xl font-serif font-bold text-[#173B2B] mb-2">Botanical Product Not Found</h1>
+          <p className="text-sm text-[#5A6E60] font-light max-w-md mx-auto mb-8">
+            The botanical extract or ingredient specification you requested is not available in the current catalog.
           </p>
           <Link
             href="/products"
-            className="mt-6 inline-block px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all shadow-sm"
+            className="inline-flex items-center gap-2 px-7 py-3 bg-[#173B2B] text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#204a37] transition-all shadow-md"
           >
-            Back to Catalog
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Product Catalogue</span>
           </Link>
-        </div>
+        </main>
         <Footer />
-      </>
+      </div>
     );
   }
 
-  // Cart status helpers
+  const category = categories.find(c => c.id === product.category_id);
   const isFavorite = isInWishlist(product.id);
   const isOutOfStock = product.stock_quantity <= 0;
-  const isLowStock = product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold;
-  
+
+  // Determine appropriate transparent packshot bottle based on range
+  const bottlePackshotUrl = (
+    product.product_range === 'Absolutes'
+      ? '/images/packshots/venuss-absolute-packshot.png'
+      : product.product_range === 'Specialities'
+      ? '/images/packshots/venuss-speciality-packshot.png'
+      : '/images/packshots/venuss-essential-oil-packshot.png'
+  );
+
+  const rawBotanicalImage = product.image_url || '/images/products/lavender-oil.jpg';
+
   const handleQtyChange = (type: 'inc' | 'dec') => {
     if (type === 'inc') {
       setQty(prev => Math.min(prev + 1, product.stock_quantity));
@@ -115,567 +153,461 @@ export default function ProductDetailsPage() {
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    addToCart(product, qty);
+    addToCart(product, qty, selectedPackaging);
     setIsAddedSuccess(true);
-    showToast(`Added ${qty} × "${product.name}" to cart`);
+    showToast(`Added ${qty} × "${product.name}" (${selectedPackaging || 'Unit'}) to cart`);
     
-    // Open the luxury cart drawer
     setTimeout(() => {
       setIsAddedSuccess(false);
       openCartDrawer();
     }, 450);
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('cart-item-fly', {
-          detail: {
-            imageUrl: product.image_url,
-            startX: e.clientX,
-            startY: e.clientY
-          }
-        })
-      );
-    }
-  };
-
-  const handleBuyNow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    addToCart(product, qty);
-    router.push('/checkout');
   };
 
   const handleWishlistClick = (e: React.MouseEvent) => {
-    if (!isFavorite && typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('wishlist-item-fly', {
-          detail: {
-            imageUrl: product.image_url,
-            startX: e.clientX,
-            startY: e.clientY
-          }
-        })
-      );
-    }
+    e.preventDefault();
     toggleWishlist(product);
   };
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!product || !newName.trim() || !newTitle.trim() || !newComment.trim()) return;
-
-    setReviewSubmitting(true);
-    await db.saveReview({
-      product_id: product.id,
-      product_name: product.name,
-      user_name: newName.trim(),
-      user_email: newEmail.trim() || 'customer@venuss.co.in',
-      rating: newRating,
-      title: newTitle.trim(),
-      comment: newComment.trim(),
-      status: 'approved'
-    });
-
-    setReviewSubmitting(false);
-    setReviewSubmittedNotice('Thank you! Your review has been published.');
-    showToast('Thank you! Your review has been published.');
-    setShowWriteReview(false);
-    setNewTitle('');
-    setNewComment('');
-
-    // Reload reviews
-    const prodReviews = await db.getReviews(product.id, 'approved');
-    setReviews(prodReviews);
-
-    setTimeout(() => setReviewSubmittedNotice(''), 4000);
-  };
-
-  const approvedReviews = reviews;
-  const totalReviewsCount = approvedReviews.length;
-  const avgRating = totalReviewsCount > 0
-    ? (approvedReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviewsCount).toFixed(1)
-    : '5.0';
-
-  const getRatingPct = (star: number) => {
-    if (totalReviewsCount === 0) return 0;
-    const count = approvedReviews.filter((r) => r.rating === star).length;
-    return Math.round((count / totalReviewsCount) * 100);
-  };
-
-  const gstAmount = Math.round(product.price * 0.18);
-  const totalPriceWithGst = product.price + gstAmount;
-
   return (
-    <>
+    <div className="relative min-h-screen bg-[#F7F4EA] text-[#2D3748] flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full animate-fade-in">
-        {/* Back Link */}
-        <button 
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary transition-colors uppercase tracking-wider mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        {/* =========================================================
+            BREADCRUMB & BACK ACTION
+           ========================================================= */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#173B2B]/10 mb-8">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[13.5px] font-medium text-[#48634F]">
+            <Link href="/" className="hover:text-[#173B2B] transition-colors">Home</Link>
+            <ChevronRight className="w-3.5 h-3.5 text-[#728B79]" />
+            <Link href="/products" className="hover:text-[#173B2B] transition-colors">Shop</Link>
+            {category && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-[#728B79]" />
+                <Link href={`/products?category=${category.slug}`} className="hover:text-[#173B2B] transition-colors">
+                  {category.name}
+                </Link>
+              </>
+            )}
+            <ChevronRight className="w-3.5 h-3.5 text-[#728B79]" />
+            <span className="text-[#173B2B] font-bold truncate max-w-[200px] sm:max-w-none">
+              {product.name}
+            </span>
+          </nav>
 
-        {/* Details Layout (Left: Image Gallery, Right: Details) */}
+          <button 
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#173B2B] hover:text-[#2E5E3E] transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back</span>
+          </button>
+        </div>
+
+        {/* =========================================================
+            PRODUCT HERO SECTION (2-Layer Stage + B2B Commercial Data)
+           ========================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
           
-          {/* LEFT SIDE: Image Gallery */}
-          <div className="lg:col-span-7 space-y-4">
-            {/* Large Image Frame */}
-            <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-slate-50 border border-slate-100 relative">
-              <img
-                src={activeImage}
-                alt={product.name}
-                className="w-full h-full object-contain p-4 transition-all duration-300"
-              />
-              {isOutOfStock && (
-                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
-                  <span className="bg-white text-primary text-xs font-bold tracking-widest uppercase py-2 px-6 rounded-full shadow-md">
-                    Out of Stock
+          {/* LEFT COLUMN: E-Robertet Two-Layer Image Showcase Stage */}
+          <div className="lg:col-span-6 flex flex-col items-center">
+            <div className="relative w-full aspect-square max-w-[540px] rounded-3xl bg-white/90 border border-[#173B2B]/12 shadow-sm p-6 sm:p-8 flex items-center justify-center overflow-hidden">
+              
+              {/* Layer 1 — Circular Botanical Source Plant Background (Significantly Clearer & Visible) */}
+              <div className="w-72 h-72 sm:w-84 sm:h-84 md:w-92 md:h-92 rounded-full overflow-hidden shadow-inner border-2 border-[#173B2B]/10 bg-[#DCE5D5] flex items-center justify-center select-none transition-transform duration-700 hover:scale-[1.02]">
+                <img
+                  src={rawBotanicalImage}
+                  alt={`${product.name} botanical source`}
+                  className="w-full h-full object-cover object-center filter saturate-[1.05]"
+                />
+              </div>
+
+              {/* Layer 2 — Foreground Amber Apothecary Bottle Packshot with Soft Contact Shadow */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                <div className="relative flex flex-col items-center transform transition-transform duration-500 hover:scale-[1.02]">
+                  <img
+                    src={bottlePackshotUrl}
+                    alt={`${product.name} pure amber packshot`}
+                    className="h-64 sm:h-72 md:h-76 w-auto object-contain drop-shadow-[0_12px_24px_rgba(20,40,30,0.22)]"
+                  />
+                  {/* Soft Grounded Contact Shadow */}
+                  <div 
+                    className="w-36 sm:w-42 md:w-46 h-3 bg-black/25 rounded-full blur-[4.5px] -mt-1.5 opacity-85"
+                    aria-hidden="true" 
+                  />
+                </div>
+              </div>
+
+              {/* Top Right: Certified Organic Seal (if applicable) */}
+              {product.is_organic && (
+                <div className="absolute top-5 right-5 z-20 pointer-events-none">
+                  <div className="w-11 h-11 rounded-full bg-[#173B2B] text-white flex flex-col items-center justify-center shadow-md border-2 border-white">
+                    <span className="text-[7px] font-black uppercase tracking-tight leading-none">ORGANIC</span>
+                    <span className="text-[6px] font-semibold uppercase tracking-widest leading-none mt-0.5 text-[#DCE5D5]">CERTIFIED</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Restrained Jasmine Badge (Only if Jasmine) */}
+              {product.name.toLowerCase().includes('jasmine') && (
+                <div className="absolute bottom-5 left-5 z-20 pointer-events-none">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#173B2B]/90 text-white text-xs font-bold tracking-wider backdrop-blur-xs border border-white/20 shadow-xs">
+                    <Leaf className="w-3.5 h-3.5 text-[#A3E635]" />
+                    <span>Madurai Jasmine</span>
                   </span>
                 </div>
               )}
-            </div>
 
-            {/* Thumbnail Gallery (Slider) */}
-            {product.images && product.images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImage(img)}
-                    className={`relative w-24 aspect-[4/3] rounded-xl overflow-hidden bg-slate-50 border-2 transition-all flex-shrink-0 ${
-                      activeImage === img ? 'border-primary shadow-sm scale-95' : 'border-transparent opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt={`${product.name} thumbnail ${idx}`} className="w-full h-full object-contain p-1" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT SIDE: Product Meta & Checkout options */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {/* Category and ratings */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-white uppercase tracking-widest px-3 py-1 rounded-full bg-[#2E5E3E] w-fit inline-block">
-                {product.category_id === 1 ? 'Essential Oils' :
-                 product.category_id === 2 ? 'Spice Oils' :
-                 product.category_id === 3 ? 'Spice Oleoresins' :
-                 product.category_id === 4 ? 'Floral Concretes' :
-                 product.category_id === 5 ? 'Floral Absolutes' : 'Spice Powders'}
-              </span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-primary tracking-tight leading-tight font-serif">
-                {product.name}
-              </h1>
-              <div className="flex items-center gap-1 text-xs text-slate-400 font-light pt-1">
-                <div className="flex text-[#D4954B]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(Number(avgRating)) ? 'fill-[#D4954B]' : 'text-slate-200'}`} />
-                  ))}
-                </div>
-                <span>({avgRating} rating based on {totalReviewsCount} {totalReviewsCount === 1 ? 'review' : 'reviews'})</span>
-              </div>
-            </div>
-
-            {/* Pricing Section */}
-            <div className="p-5 bg-white border border-slate-200/70 rounded-2xl space-y-2 shadow-xs">
-              <div className="flex items-baseline gap-3 justify-between">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-extrabold text-[#2E5E3E]">
-                    ₹{product.price}
-                  </span>
-                  {product.original_price && (
-                    <span className="text-lg text-slate-400 line-through">
-                      ₹{product.original_price}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs text-slate-400 font-light">
-                  SKU: {product.sku}
+              {/* Top Left: SKU Pill */}
+              <div className="absolute top-5 left-5 z-20">
+                <span className="px-3.5 py-1 bg-[#173B2B]/8 text-[#173B2B] border border-[#173B2B]/20 rounded-full text-xs font-mono font-bold tracking-wider uppercase">
+                  {product.sku}
                 </span>
               </div>
-              <div className="border-t border-slate-200/60 pt-2.5 flex justify-between text-xs text-slate-500 font-light">
-                <span>GST Breakdown (18% rate)</span>
-                <span className="font-semibold text-primary">₹{gstAmount}</span>
-              </div>
-              <div className="flex justify-between text-xs font-semibold text-primary pt-0.5">
-                <span>Total (Inc. GST)</span>
-                <span>₹{totalPriceWithGst}</span>
-              </div>
             </div>
 
-            {/* Stock status indicator */}
-            <div className="flex items-center gap-2 text-xs">
-              {isOutOfStock ? (
-                <div className="flex items-center gap-1.5 text-red-500 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <span>Currently Out of Stock</span>
-                </div>
-              ) : isLowStock ? (
-                <div className="flex items-center gap-1.5 text-orange-500 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping"></span>
-                  <span>Critical Stock: Only {product.stock_quantity} left</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                  <span>In Stock (Ready to dispatch)</span>
-                </div>
+            {/* Quality Seals Row under Product Image */}
+            <div className="w-full max-w-[520px] mt-4 grid grid-cols-3 gap-2.5 text-center">
+              <div className="p-3.5 bg-white/80 rounded-2xl border border-[#173B2B]/10 flex flex-col items-center justify-center gap-1 shadow-2xs">
+                <ShieldCheck className="w-5 h-5 text-[#173B2B]" />
+                <span className="text-xs font-bold text-[#173B2B] uppercase tracking-wider">GC-MS Tested</span>
+              </div>
+              <div className="p-3.5 bg-white/80 rounded-2xl border border-[#173B2B]/10 flex flex-col items-center justify-center gap-1 shadow-2xs">
+                <Award className="w-5 h-5 text-[#173B2B]" />
+                <span className="text-xs font-bold text-[#173B2B] uppercase tracking-wider">ISO & HACCP</span>
+              </div>
+              <div className="p-3.5 bg-white/80 rounded-2xl border border-[#173B2B]/10 flex flex-col items-center justify-center gap-1 shadow-2xs">
+                <Truck className="w-5 h-5 text-[#173B2B]" />
+                <span className="text-xs font-bold text-[#173B2B] uppercase tracking-wider">Global Export</span>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Product Information & Commercial Enquiry */}
+          <div className="lg:col-span-6 space-y-6">
+            
+            {/* Range & Category Eyebrow */}
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="px-3.5 py-1 rounded-full bg-[#173B2B] text-white text-xs font-bold uppercase tracking-wider">
+                  {category ? category.name : product.product_range}
+                </span>
+                {product.badge && (
+                  <span className="px-3 py-1 rounded-full bg-[#DCE5D5] text-[#173B2B] text-xs font-bold uppercase tracking-wider border border-[#173B2B]/15">
+                    {product.badge}
+                  </span>
+                )}
+                <span className="text-[13.5px] text-[#4A5D50] font-medium ml-auto">
+                  Origin: <strong className="text-[#173B2B] font-bold">{product.country || 'India'}</strong>
+                </span>
+              </div>
+
+              {/* Product Title (font-heading, ~42-46px) */}
+              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-heading font-extrabold text-[#173B2B] tracking-tight leading-[1.15]">
+                {product.name}
+              </h1>
+
+              {/* Botanical Latin Name */}
+              {product.botanical_name && (
+                <p className="text-lg sm:text-xl font-heading font-bold italic text-[#C78738]">
+                  {product.botanical_name}
+                  {product.cas_number && (
+                    <span className="not-italic text-[13px] text-[#4A5D50] font-sans font-semibold ml-2">
+                      (CAS: {product.cas_number})
+                    </span>
+                  )}
+                </p>
               )}
             </div>
 
-            {/* Quantity Selector & Wishlist toggle */}
-            {!isOutOfStock && (
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">Quantity</span>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-slate-200 rounded-xl bg-white p-1">
+            {/* Product Overview Summary */}
+            <p className="text-base sm:text-[17.5px] text-[#243B2C] font-normal leading-relaxed">
+              {product.description}
+            </p>
+
+            {/* Botanical Specification Attribute Chips */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-white/80 rounded-2xl border border-[#173B2B]/15 text-[13.5px]">
+              <div>
+                <span className="text-xs text-[#5F7C5D] uppercase font-bold tracking-wider block mb-0.5">Extraction</span>
+                <span className="font-bold text-[#173B2B]">{product.extraction_method || 'Steam Distillation'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-[#5F7C5D] uppercase font-bold tracking-wider block mb-0.5">Olfactory Family</span>
+                <span className="font-bold text-[#173B2B]">{product.olfactory_family || 'Spicy'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-[#5F7C5D] uppercase font-bold tracking-wider block mb-0.5">Applications</span>
+                <span className="font-bold text-[#173B2B]">
+                  {product.applications && product.applications.length > 0 ? product.applications.join(', ') : 'Fragrance'}
+                </span>
+              </div>
+            </div>
+
+            {/* Commercial Packaging Options */}
+            {product.packaging_options && product.packaging_options.length > 0 && (
+              <div className="space-y-2.5">
+                <span className="text-[14px] font-bold text-[#173B2B] uppercase tracking-wider block">
+                  Export Packaging Formats
+                </span>
+                <div className="flex flex-wrap gap-2.5">
+                  {product.packaging_options.map((pkg, idx) => (
                     <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedPackaging(pkg)}
+                      className={`px-4 py-2 rounded-xl text-[13.5px] sm:text-[14px] font-bold border transition-all cursor-pointer ${
+                        selectedPackaging === pkg
+                          ? 'bg-[#173B2B] text-white border-[#173B2B] shadow-2xs'
+                          : 'bg-white text-[#173B2B] border-[#173B2B]/20 hover:border-[#173B2B]/50'
+                      }`}
+                    >
+                      {pkg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Commercial Pricing Card */}
+            <div className="p-6 bg-white rounded-2xl border border-[#173B2B]/15 shadow-xs space-y-4">
+              <div className="flex items-baseline justify-between gap-4">
+                <div>
+                  <span className="text-[13px] text-[#4A5D50] font-medium block">Standard Bulk Unit</span>
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="text-3xl sm:text-4xl font-heading font-extrabold text-[#173B2B]">
+                      ₹{product.price.toLocaleString('en-IN')}
+                    </span>
+                    {product.original_price && (
+                      <span className="text-base text-slate-400 line-through">
+                        ₹{product.original_price.toLocaleString('en-IN')}
+                      </span>
+                    )}
+                    <span className="text-sm text-[#4A5D50] font-semibold">
+                      / {selectedPackaging || 'Unit'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DCE5D5]/80 text-[#173B2B] text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                    <span>In Stock for Export</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Quantity selector & B2B Commercial Actions */}
+              <div className="space-y-3.5 pt-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Quantity */}
+                  <div className="flex items-center border border-[#173B2B]/20 rounded-xl bg-[#FAF9F5] p-1 shrink-0 h-12 justify-between sm:justify-start">
+                    <button
+                      id="product-qty-dec"
+                      type="button"
                       onClick={() => handleQtyChange('dec')}
                       disabled={qty <= 1}
-                      className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white text-[#173B2B] disabled:opacity-30 cursor-pointer"
+                      aria-label="Decrease quantity"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
-                    <span className="px-5 text-sm font-semibold text-primary select-none">{qty}</span>
+                    <span id="product-qty-val" className="px-4 text-[15px] font-bold text-[#173B2B] select-none min-w-[36px] text-center">
+                      {qty}
+                    </span>
                     <button
+                      id="product-qty-inc"
+                      type="button"
                       onClick={() => handleQtyChange('inc')}
                       disabled={qty >= product.stock_quantity}
-                      className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white text-[#173B2B] disabled:opacity-30 cursor-pointer"
+                      aria-label="Increase quantity"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                  <span className="text-xs text-slate-400 font-light">
-                    Max available: {product.stock_quantity} units
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {/* CTA Buttons (ADD TO CART + BUY NOW + WISHLIST) */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {isOutOfStock ? (
-                <button
-                  disabled
-                  className="flex-grow py-4 bg-slate-100 text-slate-400 cursor-not-allowed rounded-xl text-sm font-semibold uppercase tracking-wider text-center"
-                >
-                  Out of Stock
-                </button>
-              ) : (
-                <>
+                  {/* Primary Action: Request Commercial Quote & COA */}
+                  <Link
+                    id="product-request-quote-btn"
+                    href={`/contact?product=${encodeURIComponent(product.name)}&id=${encodeURIComponent(product.id)}&type=quote&pkg=${encodeURIComponent(selectedPackaging)}&qty=${qty}`}
+                    className="flex-1 h-12 px-6 bg-[#173B2B] hover:bg-[#204a37] text-white rounded-xl text-[14px] sm:text-[14.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer text-center"
+                  >
+                    <MessageSquare className="w-4.5 h-4.5 text-[#DCE5D5]" />
+                    <span>Request Quote &amp; COA</span>
+                  </Link>
+
+                  {/* Direct Add to Cart */}
                   <button
+                    id="product-add-to-cart-btn"
+                    type="button"
                     onClick={handleAddToCart}
-                    className="flex-1 py-3.5 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                    className="h-12 px-5 border border-[#173B2B]/25 hover:border-[#173B2B] bg-white text-[#173B2B] rounded-xl text-[13.5px] sm:text-[14px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
                   >
                     {isAddedSuccess ? (
                       <>
-                        <Check className="w-4 h-4 text-[#D4954B]" />
+                        <Check className="w-4.5 h-4.5 text-emerald-600" />
                         <span>Added</span>
                       </>
                     ) : (
                       <>
-                        <ShoppingBag className="w-4 h-4" />
+                        <ShoppingBag className="w-4.5 h-4.5 text-[#2E5E3E]" />
                         <span>Add to Cart</span>
                       </>
                     )}
                   </button>
 
+                  {/* Wishlist */}
                   <button
-                    onClick={handleBuyNow}
-                    className="flex-1 py-3.5 bg-[#D48B38] hover:bg-[#BF7A2C] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-                  >
-                    <span>BUY NOW</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => handleWishlistClick(e)}
-                    className={`py-3.5 px-4 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                      isFavorite 
-                        ? 'border-red-200 bg-red-50 text-red-500' 
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    id="product-wishlist-btn"
+                    type="button"
+                    onClick={handleWishlistClick}
+                    className={`h-12 w-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                      isFavorite
+                        ? 'bg-rose-50 border-rose-300 text-rose-600'
+                        : 'bg-white border-[#173B2B]/20 text-[#173B2B] hover:bg-[#FAF9F5]'
                     }`}
-                    title="Wishlist"
+                    aria-label="Save to Wishlist"
+                    title="Save to Wishlist"
                   >
-                    <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500' : ''}`} />
-                    <span className="hidden xl:inline">{isFavorite ? 'Saved' : 'Wishlist'}</span>
+                    <Heart className={`w-5 h-5 ${isFavorite ? 'fill-rose-600 text-rose-600' : ''}`} />
                   </button>
-                </>
-              )}
-            </div>
+                </div>
 
-            {/* Quality Seals */}
-            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6">
-              <div className="flex items-center gap-2 text-xs text-slate-600 font-light">
-                <ShieldCheck className="w-4 h-4 text-[#D4954B]" />
-                <span>100% Pure & GC-MS Tested</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600 font-light">
-                <Truck className="w-4 h-4 text-[#2E5E3E]" />
-                <span>Ships in 24h from Tamil Nadu</span>
+                {/* Secondary Row: Sample Order & Bulk / Export Enquiry Options */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <Link
+                    id="product-sample-order-btn"
+                    href={`/contact?product=${encodeURIComponent(product.name)}&id=${encodeURIComponent(product.id)}&type=sample&pkg=${encodeURIComponent(selectedPackaging)}&qty=${qty}`}
+                    className="h-11 px-4 rounded-xl border border-[#173B2B]/25 bg-white hover:bg-slate-50 text-[#173B2B] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer text-center"
+                  >
+                    <FlaskConical className="w-4 h-4 text-[#D4954B]" />
+                    <span>Sample Order (Lab Vial)</span>
+                  </Link>
+
+                  <Link
+                    id="product-bulk-order-btn"
+                    href={`/contact?product=${encodeURIComponent(product.name)}&id=${encodeURIComponent(product.id)}&type=export&pkg=${encodeURIComponent(selectedPackaging)}&qty=${qty}`}
+                    className="h-11 px-4 rounded-xl border border-[#173B2B]/25 bg-white hover:bg-slate-50 text-[#173B2B] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer text-center"
+                  >
+                    <Truck className="w-4 h-4 text-[#2E5E3E]" />
+                    <span>Export / Bulk Order Enquiry</span>
+                  </Link>
+                </div>
               </div>
             </div>
 
           </div>
+
         </div>
 
-        {/* BOTTOM SECTIONS: Botanical Extraction Details & Spec sheets */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-t border-slate-100 pt-12 mb-16">
-          <div className="lg:col-span-7 space-y-6">
-            <h2 className="text-xl font-bold text-primary tracking-tight font-serif">Botanical Extraction & Profile</h2>
-            <p className="text-sm text-slate-600 font-light leading-relaxed whitespace-pre-line">
-              {product.description}
-            </p>
-            <div className="p-4 bg-[#E4ECE5]/50 border border-[#2E5E3E]/15 rounded-2xl space-y-2">
-              <span className="text-xs font-bold text-[#173F2C] uppercase tracking-wider block">Authenticity & Quality Monograph</span>
-              <p className="text-xs text-[#2E5E3E] font-light leading-relaxed">
-                Every single batch is steam-distilled or cold-pressed with supercritical botanical precision. From farm-level cultivation across the Western Ghats to analytical validation via gas chromatography-mass spectrometry (GC-MS), our extracts meet strict international pharmacopeia standards.
+        {/* =========================================================
+            TECHNICAL SPECIFICATIONS MONOGRAPH (Verified Specs Table)
+           ========================================================= */}
+        <section className="mb-16 border-t border-[#173B2B]/12 pt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            
+            {/* Left: Botanical Monograph Description */}
+            <div className="lg:col-span-6 space-y-5">
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#DCE5D5]/80 text-xs uppercase font-bold tracking-wider text-[#173B2B]">
+                <FileText className="w-3.5 h-3.5" />
+                <span>Analytical Monograph</span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-heading font-extrabold text-[#173B2B] tracking-tight">
+                Botanical Origin & Extraction Precision
+              </h2>
+
+              <p className="text-base sm:text-[17px] text-[#243B2C] font-normal leading-relaxed">
+                Venuss Herbo Aromatics manufactures {product.name} through validated industrial processes governed by strict pharmacopeia standards. From raw material intake inspection to analytical Gas Chromatography-Mass Spectrometry (GC-MS) verification, each lot is documented with a dedicated Certificate of Analysis (COA) and Material Safety Data Sheet (MSDS).
               </p>
-            </div>
-          </div>
 
-          <div className="lg:col-span-5 space-y-4">
-            <h2 className="text-xl font-bold text-primary tracking-tight">Specifications</h2>
-            <div className="border border-slate-200/60 rounded-2xl overflow-hidden bg-slate-50/50">
-              <table className="w-full border-collapse text-left text-xs font-light text-slate-500">
-                <tbody>
-                  {Object.entries(product.specs || {}).map(([key, value], idx) => (
-                    <tr 
-                      key={idx} 
-                      className={`border-b border-slate-150 ${idx % 2 === 0 ? 'bg-slate-100/40' : 'bg-transparent'}`}
-                    >
-                      <td className="px-4 py-3 font-semibold text-primary w-2/5 capitalize">{key}</td>
-                      <td className="px-4 py-3 text-slate-600 w-3/5">{value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="p-5 bg-white/90 rounded-2xl border border-[#173B2B]/15 space-y-2.5 shadow-2xs">
+                <span className="text-[14.5px] font-bold text-[#173B2B] uppercase tracking-wider block">
+                  Quality & Regulatory Compliance
+                </span>
+                <p className="text-[14px] text-[#3D5244] font-normal leading-relaxed">
+                  Manufactured under ISO 9001:2015 and HACCP quality management systems. FSSAI licensed for food and flavoring safety. 100% natural and steam sterilized without toxic Ethylene Oxide (ETO) or radiation exposure.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href={`/contact?product=${encodeURIComponent(product.name)}&type=quote`}
+                  className="inline-flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-[#173B2B] hover:text-[#2E5E3E] transition-colors"
+                >
+                  <span>Request Full Batch Technical Dossier / COA</span>
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
+
+            {/* Right: Specifications Table */}
+            <div className="lg:col-span-6">
+              <div className="bg-white rounded-2xl border border-[#173B2B]/15 shadow-2xs overflow-hidden">
+                <div className="px-5 py-4 bg-[#F5F2E9] border-b border-[#173B2B]/10">
+                  <h3 className="font-heading font-extrabold text-[16px] text-[#173B2B]">
+                    Technical Data Sheet (TDS)
+                  </h3>
+                </div>
+
+                <table className="w-full text-left">
+                  <tbody>
+                    {Object.entries(product.specs || {}).map(([key, value], idx) => (
+                      <tr 
+                        key={idx}
+                        className={`border-b border-[#173B2B]/8 last:border-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FAF9F5]'}`}
+                      >
+                        <td className="px-5 py-3.5 font-bold text-[#173B2B] text-[14px] w-2/5">
+                          {key}
+                        </td>
+                        <td className="px-5 py-3.5 text-[#243B2C] font-mono text-[13px] font-medium w-3/5">
+                          {value}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* CUSTOMER REVIEWS SECTION */}
-        <section className="border-t border-slate-200/80 pt-16 mb-16">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div>
-              <h2 className="text-2xl font-extrabold text-[#2E5E3E] tracking-tight font-serif">Customer Reviews</h2>
-              <p className="text-xs text-slate-500 font-light mt-1">Verified buyer experiences & feedback for {product.name}</p>
-            </div>
-            <button
-              onClick={() => setShowWriteReview(!showWriteReview)}
-              className="px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
-            >
-              <Star className="w-4 h-4 text-[#D4954B] fill-[#D4954B]" />
-              <span>{showWriteReview ? 'Close Review Form' : 'Write a Review'}</span>
-            </button>
-          </div>
-
-          {/* Submitted Alert Notice */}
-          {reviewSubmittedNotice && (
-            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-600" />
-              <span>{reviewSubmittedNotice}</span>
-            </div>
-          )}
-
-          {/* WRITE REVIEW FORM */}
-          {showWriteReview && (
-            <form onSubmit={handleSubmitReview} className="mb-12 bg-white border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-sm space-y-6 animate-fade-in">
-              <h3 className="text-lg font-extrabold text-[#2E5E3E] font-serif">Write Your Review</h3>
-              
-              {/* Rating Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Your Rating</label>
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      type="button"
-                      key={star}
-                      onMouseEnter={() => setNewHoverRating(star)}
-                      onMouseLeave={() => setNewHoverRating(0)}
-                      onClick={() => setNewRating(star)}
-                      className="p-1 transition-transform hover:scale-110 focus:outline-none"
-                    >
-                      <Star
-                        className={`w-7 h-7 ${
-                          star <= (newHoverRating || newRating)
-                            ? 'text-[#D4954B] fill-[#D4954B]'
-                            : 'text-slate-200'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-3 text-xs font-semibold text-slate-600">{newHoverRating || newRating} out of 5 Stars</span>
-                </div>
-              </div>
-
-              {/* Name & Email inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Your Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ananya Sharma"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E]"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Your Email</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. ananya@example.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E]"
-                  />
-                </div>
-              </div>
-
-              {/* Title Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Review Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Exceptional Purity & Long-lasting Fragrance"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E]"
-                />
-              </div>
-
-              {/* Comment Textarea */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Review Comment *</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Share your detailed experience with this product..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWriteReview(false)}
-                  className="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={reviewSubmitting}
-                  className="px-8 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md transition-all disabled:opacity-50"
-                >
-                  {reviewSubmitting ? 'Publishing...' : 'Submit Review'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* REVIEWS OVERVIEW BLOCK (Summary + Bars) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12 items-center bg-slate-50/70 border border-slate-200/60 p-6 sm:p-8 rounded-3xl">
-            {/* Average Big Display */}
-            <div className="lg:col-span-4 text-center lg:text-left space-y-2 border-b lg:border-b-0 lg:border-r border-slate-200/60 pb-6 lg:pb-0 lg:pr-8">
-              <div className="text-5xl font-extrabold text-[#2E5E3E] font-serif">{avgRating}</div>
-              <div className="flex items-center justify-center lg:justify-start gap-1 text-[#D4954B]">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-5 h-5 ${i < Math.round(Number(avgRating)) ? 'fill-[#D4954B]' : 'text-slate-200'}`} />
-                ))}
-              </div>
-              <p className="text-xs text-slate-500 font-light">Based on {totalReviewsCount} verified reviews</p>
-            </div>
-
-            {/* Rating Breakdown Bars */}
-            <div className="lg:col-span-8 space-y-2">
-              {[5, 4, 3, 2, 1].map((star) => {
-                const pct = getRatingPct(star);
-                return (
-                  <div key={star} className="flex items-center gap-3 text-xs">
-                    <span className="w-12 text-slate-600 font-semibold flex items-center gap-1">
-                      {star} <Star className="w-3 h-3 text-[#D4954B] fill-[#D4954B]" />
-                    </span>
-                    <div className="flex-1 bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-[#D4954B] h-full rounded-full transition-all duration-500" style={{ width: `${pct}%` }}></div>
-                    </div>
-                    <span className="w-10 text-right text-slate-400 font-light text-[11px]">{pct}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* REVIEWS LIST */}
-          {reviews.length === 0 ? (
-            <div className="p-12 text-center bg-white border border-slate-200/60 rounded-3xl">
-              <Star className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-sm font-bold text-slate-700">No customer reviews yet</h3>
-              <p className="text-xs text-slate-400 mt-1">Be the first to review {product.name}!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {reviews.map((rev) => (
-                <div key={rev.id} className="bg-white border border-slate-200/70 p-6 rounded-2xl shadow-xs space-y-3">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-[#2E5E3E]/10 text-[#2E5E3E] flex items-center justify-center font-bold text-xs">
-                        {rev.user_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-[#2E5E3E]">{rev.user_name}</span>
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                            Verified Buyer
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-light">
-                          {new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Star Rating */}
-                    <div className="flex text-[#D4954B]">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < rev.rating ? 'fill-[#D4954B]' : 'text-slate-200'}`} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Title & Comment */}
-                  <h4 className="text-sm font-bold text-slate-900">{rev.title}</h4>
-                  <p className="text-xs text-slate-600 font-light leading-relaxed whitespace-pre-line">{rev.comment}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* RELATED PRODUCTS */}
+        {/* =========================================================
+            RELATED BOTANICAL INGREDIENTS
+           ========================================================= */}
         {relatedProducts.length > 0 && (
-          <section className="border-t border-slate-100 pt-16">
-            <h2 className="text-2xl font-extrabold text-primary tracking-tight mb-8">Related Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((prod) => (
-                <ProductCard key={prod.id} product={prod} />
+          <section className="border-t border-[#173B2B]/12 pt-12 mb-8">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <span className="text-xs font-bold text-[#48634F] uppercase tracking-wider block mb-1">
+                  Complementary Extracts
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-[#173B2B]">
+                  Related {category ? category.name : 'Botanicals'}
+                </h2>
+              </div>
+
+              <Link
+                href={`/products?category=${category ? category.slug : ''}`}
+                className="text-[14px] font-bold text-[#173B2B] uppercase tracking-wider hover:text-[#2E5E3E] transition-colors"
+              >
+                View Category
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {relatedProducts.map(rel => (
+                <ProductCard key={rel.id} product={rel} />
               ))}
             </div>
           </section>
         )}
+
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }

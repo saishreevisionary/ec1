@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { PRODUCTS, CATEGORIES, Product, Category } from './seedData';
+export type { Product, Category };
+import { hashPassword, verifyPassword } from './authCrypto';
 
 // Supabase config (optional fallbacks)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -13,6 +15,27 @@ export const isSupabaseConfigured = () => {
 export const supabase = isSupabaseConfigured() 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
+
+export interface CommercialInquiry {
+  id: string;
+  reference_no: string;
+  inquiry_type: 'quote' | 'sample' | 'export' | 'custom' | 'general';
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  product_id?: string;
+  product_name?: string;
+  product_category?: string;
+  quantity?: number;
+  packaging?: string;
+  destination_country?: string;
+  message: string;
+  status: 'new' | 'in_progress' | 'quoted' | 'dispatched' | 'closed';
+  user_id?: string;
+  created_at: string;
+  updated_at?: string;
+}
 
 export interface Review {
   id: string;
@@ -40,51 +63,167 @@ const KEYS = {
   SESSION: 'lendorastore_session',
   REVIEWS: 'lendorastore_reviews',
   ADDRESSES: 'lendorastore_addresses',
+  INQUIRIES: 'venuss_contact_submissions',
 };
 
-// Initialize localStorage DB if empty
+/**
+ * Safe Category Reconciliation:
+ * Reconciles persisted categories with official seed categories.
+ * Preserves administrator custom categories and updates, while ensuring all 6 official
+ * categories are present with verified IDs, slugs, and names.
+ */
+export const reconcileCategories = (
+  persisted: Category[] | null | undefined,
+  officialCategories: Category[]
+): Category[] => {
+  if (!Array.isArray(persisted) || persisted.length === 0) {
+    return officialCategories.map(c => ({ ...c, is_active: c.is_active !== false }));
+  }
+
+  const result: Category[] = [...persisted];
+  const existingIds = new Set(result.map(c => c.id));
+  const existingSlugs = new Set(result.map(c => c.slug));
+
+  for (const official of officialCategories) {
+    if (!existingIds.has(official.id) && !existingSlugs.has(official.slug)) {
+      result.push({ ...official, is_active: official.is_active !== false });
+      existingIds.add(official.id);
+      existingSlugs.add(official.slug);
+    } else {
+      const idx = result.findIndex(c => c.id === official.id || c.slug === official.slug);
+      if (idx !== -1) {
+        result[idx] = {
+          ...official,
+          ...result[idx],
+          name: result[idx].name || official.name,
+          slug: result[idx].slug || official.slug,
+          description: result[idx].description !== undefined ? result[idx].description : official.description,
+          image_url: result[idx].image_url || official.image_url,
+          is_active: result[idx].is_active !== undefined ? result[idx].is_active : (official.is_active !== false),
+          sort_order: result[idx].sort_order ?? official.sort_order ?? idx + 1
+        };
+      }
+    }
+  }
+
+  return result.sort((a, b) => (a.sort_order ?? a.id) - (b.sort_order ?? b.id));
+};
+
+/**
+ * Safe Product Reconciliation:
+ * Reconciles persisted products in storage with official seed products.
+ * 1. Preserves all administrator edits (price, stock, title, description, custom fields, etc.).
+ * 2. Preserves newly created products (UUIDs or non-seed IDs/slugs).
+ * 3. Restores missing official products without duplicates.
+ * 4. Backfills missing canonical botanical fields on older seed records without overwriting edited values.
+ * 5. Does not assign arbitrary botanical defaults to unknown products.
+ * 6. Validates category references against verified categories.
+ */
+export const reconcileProducts = (
+  persisted: Product[] | null | undefined,
+  officialSeed: Product[],
+  categories: Category[]
+): Product[] => {
+  if (!Array.isArray(persisted) || persisted.length === 0) {
+    return [...officialSeed];
+  }
+
+  const validCategoryIds = new Set(categories.map(c => c.id));
+  const accountedSeedSlugs = new Set<string>();
+  const accountedSeedIds = new Set<string>();
+
+  // 1. Process persisted products
+  const reconciledList: Product[] = persisted.map(item => {
+    // Attempt stable match: first by ID, then by validated slug
+    const seedMatch = officialSeed.find(
+      s => (item.id && s.id === item.id) || (item.slug && s.slug === item.slug)
+    );
+
+    if (seedMatch) {
+      accountedSeedIds.add(seedMatch.id);
+      accountedSeedSlugs.add(seedMatch.slug);
+
+      // Official product: merge base seed attributes with admin-persisted modifications.
+      // Persisted values override seed values (preserving admin edits).
+      const merged: Product = {
+        ...seedMatch, // Base canonical attributes (botanical_name, specs, etc.)
+        ...item,      // Administrator edits (price, stock, description, image, etc.)
+        id: item.id || seedMatch.id,
+        slug: item.slug || seedMatch.slug,
+        // Safely merge specs dictionary without clobbering edited specs
+        specs: {
+          ...(seedMatch.specs || {}),
+          ...(item.specs || {}),
+        },
+        // Packaging options: preserve item's packaging if present, else seed
+        packaging_options: (item.packaging_options && item.packaging_options.length > 0)
+          ? item.packaging_options
+          : seedMatch.packaging_options,
+      };
+
+      // Validate category reference against verified category records
+      if (!validCategoryIds.has(merged.category_id)) {
+        merged.category_id = seedMatch.category_id;
+      }
+
+      return merged;
+    }
+
+    // Administrator-created product (not present in official seed):
+    // Preserve its fields as-is without assigning arbitrary botanical defaults.
+    const customProduct: Product = { ...item };
+    if (!validCategoryIds.has(customProduct.category_id)) {
+      customProduct.category_id = categories[0]?.id || 1;
+    }
+
+    return customProduct;
+  });
+
+  // 2. Restore any missing official seed products without duplicates
+  for (const seed of officialSeed) {
+    if (!accountedSeedIds.has(seed.id) && !accountedSeedSlugs.has(seed.slug)) {
+      reconciledList.push({ ...seed });
+      accountedSeedIds.add(seed.id);
+      accountedSeedSlugs.add(seed.slug);
+    }
+  }
+
+  return reconciledList;
+};
+
+// Initialize localStorage DB safely
 const initLocalDb = () => {
   if (typeof window === 'undefined') return;
 
-  const existingCats = localStorage.getItem(KEYS.CATEGORIES);
-  if (!existingCats) {
-    localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
-  } else {
+  // 1. Reconcile categories safely
+  const rawCats = localStorage.getItem(KEYS.CATEGORIES);
+  let parsedCats: Category[] | null = null;
+  if (rawCats) {
     try {
-      let cats: Category[] = JSON.parse(existingCats);
-      let changed = false;
-      cats = cats.map(c => {
-        if (c.slug === 'spice-powders' || c.id === 6 || c.image_url?.includes('photo-1615396879814')) {
-          changed = true;
-          return { ...c, image_url: '/images/spice-powders.jpg' };
-        }
-        if (c.image_url?.includes('photo-1608248597481')) {
-          changed = true;
-          return { ...c, image_url: '/images/botanical-hero.jpg' };
-        }
-        return c;
-      });
-      if (changed) {
-        localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(cats));
-      }
+      parsedCats = JSON.parse(rawCats);
     } catch {
-      localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
+      parsedCats = null;
     }
   }
+  const verifiedCats = reconcileCategories(parsedCats, CATEGORIES);
+  localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(verifiedCats));
 
-  const DB_CATALOG_VERSION = 'v6_reference_controlled';
-  const storedVersion = localStorage.getItem('venuss_catalog_version');
-
-  if (storedVersion !== DB_CATALOG_VERSION) {
-    localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(PRODUCTS));
-    localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(CATEGORIES));
-    localStorage.setItem('venuss_catalog_version', DB_CATALOG_VERSION);
-  } else {
-    const existingProds = localStorage.getItem(KEYS.PRODUCTS);
-    if (!existingProds) {
-      localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(PRODUCTS));
+  // 2. Reconcile products safely
+  const rawProds = localStorage.getItem(KEYS.PRODUCTS);
+  let parsedProds: Product[] | null = null;
+  if (rawProds) {
+    try {
+      parsedProds = JSON.parse(rawProds);
+    } catch {
+      parsedProds = null;
     }
   }
+  const reconciledProds = reconcileProducts(parsedProds, PRODUCTS, verifiedCats);
+  localStorage.setItem(KEYS.PRODUCTS, JSON.stringify(reconciledProds));
+
+  // 3. Mark catalog version marker
+  const DB_CATALOG_VERSION = 'v14_reconciled_botanicals';
+  localStorage.setItem('venuss_catalog_version', DB_CATALOG_VERSION);
   if (!localStorage.getItem(KEYS.SETTINGS)) {
     const defaultSettings = [
       { key: 'gst_settings', value: { rate: 18, enabled: true } },
@@ -182,7 +321,7 @@ const setLocal = <T>(key: string, value: T): void => {
 
 export const db = {
   // --- CATEGORIES ---
-  async getCategories(): Promise<Category[]> {
+  async getCategories(activeOnly: boolean = false): Promise<Category[]> {
     let cats: Category[];
     if (supabase) {
       const { data, error } = await supabase.from('categories').select('*').order('id');
@@ -194,47 +333,150 @@ export const db = {
     } else {
       cats = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
     }
-    return cats.map(c => {
+
+    const processed = cats.map(c => {
       if (c.slug === 'spice-powders' || c.id === 6 || c.image_url?.includes('photo-1615396879814')) {
         return { ...c, image_url: '/images/spice-powders.jpg' };
       }
       return c;
     });
+
+    if (activeOnly) {
+      return processed.filter(c => c.is_active !== false);
+    }
+    return processed;
+  },
+
+  async getCategoryCounts(visibleOnly: boolean = false): Promise<Record<number, number>> {
+    const products = await this.getProducts();
+    const counts: Record<number, number> = {};
+    for (const p of products) {
+      if (visibleOnly) {
+        if (p.status === 'draft' || (p as any).is_active === false || (p as any).is_published === false) {
+          continue;
+        }
+      }
+      if (p.category_id !== undefined && p.category_id !== null) {
+        const catId = Number(p.category_id);
+        counts[catId] = (counts[catId] || 0) + 1;
+      }
+    }
+    return counts;
   },
 
   async saveCategory(category: Partial<Category>): Promise<Category> {
-    if (supabase) {
-      const { data, error } = await supabase.from('categories').upsert(category).select().single();
-      if (error) {
-        console.log("[DB_SAVE_CATEGORY_ERROR] categories table upsert error:", error);
-      }
-      if (!error && data) return data;
+    const trimmedName = category.name?.trim();
+    if (!trimmedName) {
+      throw new Error('Category name is required and cannot be empty.');
     }
+
+    // Auto-generate or sanitize slug
+    let rawSlug = category.slug?.trim() || trimmedName;
+    const cleanSlug = rawSlug
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    if (!cleanSlug) {
+      throw new Error('A valid, non-empty URL slug is required.');
+    }
+
     const categories = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+
+    // Duplicate Name & Slug Check (exclude current category if editing)
+    const duplicateName = categories.find(
+      c => (category.id === undefined || Number(c.id) !== Number(category.id)) && c.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (duplicateName) {
+      throw new Error(`A category with the name "${trimmedName}" already exists.`);
+    }
+
+    const duplicateSlug = categories.find(
+      c => (category.id === undefined || Number(c.id) !== Number(category.id)) && c.slug.trim().toLowerCase() === cleanSlug
+    );
+    if (duplicateSlug) {
+      throw new Error(`The URL slug "${cleanSlug}" is already in use by category "${duplicateSlug.name}".`);
+    }
+
+    const categoryData: Category = {
+      id: category.id || (categories.length > 0 ? Math.max(...categories.map(c => Number(c.id))) + 1 : 1),
+      name: trimmedName,
+      slug: cleanSlug,
+      description: category.description?.trim() || '',
+      image_url: category.image_url || '/images/botanical-hero.jpg',
+      is_active: category.is_active !== undefined ? Boolean(category.is_active) : true,
+      sort_order: category.sort_order ?? (category.id || categories.length + 1),
+      created_at: category.created_at || new Date().toISOString()
+    };
+
+    if (supabase) {
+      const { data, error } = await supabase.from('categories').upsert(categoryData).select().single();
+      if (error) {
+        console.warn("[DB_SAVE_CATEGORY_ERROR] categories table upsert error:", error);
+      }
+      if (!error && data) {
+        // update local cache as well
+        const idx = categories.findIndex(c => Number(c.id) === Number(data.id));
+        if (idx !== -1) {
+          categories[idx] = data;
+        } else {
+          categories.push(data);
+        }
+        setLocal(KEYS.CATEGORIES, categories);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('venuss-categories-updated', { detail: { action: 'save', category: data } }));
+        }
+        return data;
+      }
+    }
+
+    // Local Storage persistence
     if (category.id) {
-      const idx = categories.findIndex(c => c.id === category.id);
+      const idx = categories.findIndex(c => Number(c.id) === Number(category.id));
       if (idx !== -1) {
-        categories[idx] = { ...categories[idx], ...category } as Category;
+        categories[idx] = { ...categories[idx], ...categoryData };
+      } else {
+        categories.push(categoryData);
       }
     } else {
-      const nextId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
-      const newCat = { ...category, id: nextId, created_at: new Date().toISOString() } as Category;
-      categories.push(newCat);
-      setLocal(KEYS.CATEGORIES, categories);
-      return newCat;
+      categories.push(categoryData);
     }
     setLocal(KEYS.CATEGORIES, categories);
-    return category as Category;
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-categories-updated', { detail: { action: 'save', category: categoryData } }));
+    }
+
+    return categoryData;
   },
 
   async deleteCategory(id: number): Promise<boolean> {
+    // 1. Safe deletion guard: check if any products are assigned to this category
+    const products = await this.getProducts();
+    const assignedProducts = products.filter(p => Number(p.category_id) === Number(id));
+    if (assignedProducts.length > 0) {
+      const cats = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+      const catName = cats.find(c => Number(c.id) === Number(id))?.name || `ID ${id}`;
+      throw new Error(
+        `Cannot delete category "${catName}" because it contains ${assignedProducts.length} assigned product(s) (such as "${assignedProducts[0].name}"). Reassign or remove these products first, or deactivate the category instead.`
+      );
+    }
+
     if (supabase) {
       const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (!error) return true;
+      if (error) {
+        console.warn("[DB_DELETE_CATEGORY_ERROR] categories table delete error:", error);
+      }
     }
+
     const categories = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
-    const filtered = categories.filter(c => c.id !== id);
+    const filtered = categories.filter(c => Number(c.id) !== Number(id));
     setLocal(KEYS.CATEGORIES, filtered);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-categories-updated', { detail: { action: 'delete', id } }));
+    }
+
     return true;
   },
 
@@ -247,11 +489,27 @@ export const db = {
           const images = item.product_images?.length 
             ? item.product_images.sort((a: any, b: any) => a.display_order - b.display_order).map((img: any) => img.image_url)
             : [item.image_url];
-          return { ...item, images };
+          const seedMatch = PRODUCTS.find(sp => sp.id === item.id || sp.slug === item.slug);
+          return {
+            ...seedMatch,
+            ...item,
+            images,
+          };
         });
       }
     }
-    return getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
+    const localProds = getLocal<Product[]>(KEYS.PRODUCTS, []);
+    const localCats = getLocal<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+    const verifiedCats = reconcileCategories(localCats, CATEGORIES);
+    const reconciled = reconcileProducts(localProds, PRODUCTS, verifiedCats);
+
+    // If local storage did not have products or was missing items, persist reconciled state safely
+    if (typeof window !== 'undefined' && (!localProds || localProds.length !== reconciled.length)) {
+      setLocal(KEYS.PRODUCTS, reconciled);
+      setLocal(KEYS.CATEGORIES, verifiedCats);
+    }
+
+    return reconciled;
   },
 
   async getProductBySlug(slug: string): Promise<Product | null> {
@@ -264,7 +522,7 @@ export const db = {
         return { ...data, images };
       }
     }
-    const products = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
+    const products = await this.getProducts();
     return products.find(p => p.slug === slug) || null;
   },
 
@@ -307,26 +565,41 @@ export const db = {
         return { ...data, images: images || [data.image_url] };
       }
     }
-    const products = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
+    const products = await this.getProducts();
+    let savedProduct: Product;
     if (product.id) {
       const idx = products.findIndex(p => p.id === product.id);
       if (idx !== -1) {
-        products[idx] = { ...products[idx], ...product } as Product;
+        savedProduct = { ...products[idx], ...product } as Product;
+        products[idx] = savedProduct;
+      } else {
+        savedProduct = {
+          ...product,
+          id: product.id,
+          created_at: product.created_at || new Date().toISOString(),
+          images: product.images || [product.image_url || ''],
+          specs: product.specs || {}
+        } as Product;
+        products.push(savedProduct);
       }
     } else {
-      const newProd = {
+      savedProduct = {
         ...product,
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         images: product.images || [product.image_url || ''],
         specs: product.specs || {}
       } as Product;
-      products.push(newProd);
-      setLocal(KEYS.PRODUCTS, products);
-      return newProd;
+      products.push(savedProduct);
     }
     setLocal(KEYS.PRODUCTS, products);
-    return product as Product;
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-products-updated', { detail: { action: 'save', product: savedProduct } }));
+      window.dispatchEvent(new CustomEvent('venuss-categories-updated', { detail: { action: 'product-update', product: savedProduct } }));
+    }
+
+    return savedProduct;
   },
 
   async deleteProduct(id: string): Promise<boolean> {
@@ -334,9 +607,15 @@ export const db = {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (!error) return true;
     }
-    const products = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
+    const products = await this.getProducts();
     const filtered = products.filter(p => p.id !== id);
     setLocal(KEYS.PRODUCTS, filtered);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-products-updated', { detail: { action: 'delete', id } }));
+      window.dispatchEvent(new CustomEvent('venuss-categories-updated', { detail: { action: 'product-delete', id } }));
+    }
+
     return true;
   },
 
@@ -367,10 +646,11 @@ export const db = {
       if (!error && data) return data;
     }
     const orders = getLocal<any[]>(KEYS.ORDERS, []);
+    const allOrders = (Array.isArray(orders) && orders.length > 0) ? orders : getLocal<any[]>('venuss_orders', []);
     if (userId) {
-      return orders.filter(o => o.user_id === userId);
+      return allOrders.filter(o => o.user_id === userId);
     }
-    return orders;
+    return allOrders;
   },
 
   async getOrderById(id: string): Promise<any | null> {
@@ -385,41 +665,58 @@ export const db = {
   async createOrder(orderData: any, items: any[]): Promise<any> {
     const orderId = crypto.randomUUID();
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    
+    const products = await this.getProducts();
+
+    // Server-side verification of items, prices, and packaging
+    const newItems = items.map(item => {
+      const prod = products.find(p => p.id === item.product_id);
+      const verifiedPrice = prod ? prod.price : (Number(item.price) || 0);
+      const verifiedGstRate = prod?.gst_rate || 18;
+      const verifiedQty = Math.max(1, Number(item.quantity) || 1);
+
+      return {
+        id: crypto.randomUUID(),
+        order_id: orderId,
+        product_id: item.product_id,
+        packaging: item.packaging || '',
+        quantity: verifiedQty,
+        price_at_purchase: verifiedPrice,
+        gst_rate_at_purchase: verifiedGstRate,
+        products: prod || item.product,
+        created_at: new Date().toISOString()
+      };
+    });
+
+    const computedSubtotal = newItems.reduce((sum, item) => sum + (item.price_at_purchase * item.quantity), 0);
+    const computedGst = Math.round(newItems.reduce((sum, item) => sum + (item.price_at_purchase * item.quantity * (item.gst_rate_at_purchase / 100)), 0));
+    const computedGrandTotal = computedSubtotal + computedGst;
+
     const newOrder = {
       ...orderData,
       id: orderId,
+      subtotal: computedSubtotal,
+      gst_amount: computedGst,
+      grand_total: computedGrandTotal,
       status: 'pending',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      order_items: newItems
     };
 
-    const newItems = items.map(item => ({
-      id: crypto.randomUUID(),
-      order_id: orderId,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      price_at_purchase: item.price,
-      gst_rate_at_purchase: item.gst_rate || 18,
-      products: item.product,
-      created_at: new Date().toISOString()
-    }));
-
-    newOrder.order_items = newItems;
-
     // Deduct stocks
-    const products = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
+    const storedProducts = getLocal<Product[]>(KEYS.PRODUCTS, PRODUCTS);
     newItems.forEach(item => {
-      const prod = products.find(p => p.id === item.product_id);
+      const prod = storedProducts.find(p => p.id === item.product_id);
       if (prod) {
         prod.stock_quantity = Math.max(0, prod.stock_quantity - item.quantity);
       }
     });
-    setLocal(KEYS.PRODUCTS, products);
+    setLocal(KEYS.PRODUCTS, storedProducts);
 
     // Save order
     const orders = getLocal<any[]>(KEYS.ORDERS, []);
     orders.unshift(newOrder);
     setLocal(KEYS.ORDERS, orders);
+    setLocal('venuss_orders', orders);
 
     // Generate Invoice
     const newInvoice = {
@@ -472,6 +769,10 @@ export const db = {
       }
     }
 
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-orders-updated', { detail: { action: 'create', order: newOrder } }));
+    }
+
     return newOrder;
   },
 
@@ -479,13 +780,22 @@ export const db = {
     const updatePayload: any = { status, ...(extraData || {}) };
     if (supabase) {
       const { data, error } = await supabase.from('orders').update(updatePayload).eq('id', id).select().single();
-      if (!error && data) return data;
+      if (!error && data) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('venuss-orders-updated', { detail: { action: 'update', order: data } }));
+        }
+        return data;
+      }
     }
     const orders = getLocal<any[]>(KEYS.ORDERS, []);
     const idx = orders.findIndex(o => o.id === id);
     if (idx !== -1) {
       orders[idx] = { ...orders[idx], ...updatePayload };
       setLocal(KEYS.ORDERS, orders);
+      setLocal('venuss_orders', orders);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('venuss-orders-updated', { detail: { action: 'update', order: orders[idx] } }));
+      }
       return orders[idx];
     }
     return null;
@@ -498,7 +808,8 @@ export const db = {
       if (!error && data) return data;
     }
     const invoices = getLocal<any[]>(KEYS.INVOICES, []);
-    const orders = getLocal<any[]>(KEYS.ORDERS, []);
+    const rawOrders = getLocal<any[]>(KEYS.ORDERS, []);
+    const orders = (Array.isArray(rawOrders) && rawOrders.length > 0) ? rawOrders : getLocal<any[]>('venuss_orders', []);
     
     // Stitch orders
     return invoices.map(inv => ({
@@ -536,32 +847,59 @@ export const db = {
     }
   },
 
-  login(email: string, role?: 'admin' | 'customer'): any {
+  async login(email: string, password?: string, role?: 'admin' | 'customer'): Promise<{ success: boolean; user?: any; error?: string }> {
     const users = getLocal<any[]>(KEYS.USERS, []);
     let user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
+    // Check password if user has passwordHash and password is provided
+    if (user && user.passwordHash) {
+      if (!password) {
+        return { success: false, error: 'Password is required to sign in.' };
+      }
+      const isValid = await verifyPassword(password, user.passwordHash);
+      if (!isValid) {
+        return { success: false, error: 'Invalid email or password. Please verify your credentials.' };
+      }
+    } else if (user && password && !user.passwordHash) {
+      // Backfill hash if user existed without hash (e.g. legacy local record)
+      user.passwordHash = await hashPassword(password);
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx !== -1) users[idx] = user;
+      setLocal(KEYS.USERS, users);
+    }
+
     if (!user) {
-      const determinedRole = role || (
+      // If user doesn't exist and password was provided (and not explicitly logging in as admin seed)
+      const isAdminEmail = (
         email.toLowerCase() === 'admin@venuss.co.in' || 
-        email.toLowerCase() === 'admin@lendorastore.com' || 
-        email.toLowerCase().includes('admin') 
-          ? 'admin' 
-          : 'customer'
+        email.toLowerCase() === 'admin@lendorastore.com'
       );
+      
+      if (!isAdminEmail && password) {
+        return { success: false, error: 'No account found with this email. Please check your spelling or register.' };
+      }
+
+      const determinedRole = role || (isAdminEmail ? 'admin' : 'customer');
       user = {
         id: determinedRole === 'admin' ? 'admin-uuid' : crypto.randomUUID(),
         email: email,
         name: email.split('@')[0].toUpperCase(),
         role: determinedRole,
+        passwordHash: password ? await hashPassword(password) : undefined,
         created_at: new Date().toISOString()
       };
       users.push(user);
       setLocal(KEYS.USERS, users);
     }
     
+    // Safety check: Never allow normal customer login to elevate to admin
+    if (user.role === 'admin' && !role && email.toLowerCase() !== 'admin@venuss.co.in' && email.toLowerCase() !== 'admin@lendorastore.com') {
+      user.role = 'customer';
+    }
+
     setLocal(KEYS.SESSION, user);
     this.syncSessionCookies(user);
-    return user;
+    return { success: true, user };
   },
 
   logout(): void {
@@ -571,40 +909,155 @@ export const db = {
     this.syncSessionCookies(null);
   },
 
-  register(email: string, name: string): any {
+  async register(email: string, name: string, password?: string): Promise<{ success: boolean; user?: any; error?: string }> {
     const users = getLocal<any[]>(KEYS.USERS, []);
     const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (exists) {
-      setLocal(KEYS.SESSION, exists);
-      this.syncSessionCookies(exists);
-      return exists;
+      return { success: false, error: 'An account with this email address already exists. Please sign in instead.' };
     }
 
-    const determinedRole = (
-      email.toLowerCase() === 'admin@venuss.co.in' || 
-      email.toLowerCase() === 'admin@lendorastore.com' || 
-      email.toLowerCase().includes('admin') 
-        ? 'admin' 
-        : 'customer'
-    );
+    const passwordHash = password ? await hashPassword(password) : undefined;
 
     const newUser = {
       id: crypto.randomUUID(),
-      email,
-      name,
-      role: determinedRole,
+      email: email.trim(),
+      name: name.trim(),
+      role: 'customer' as const,
+      passwordHash,
       created_at: new Date().toISOString()
     };
     users.push(newUser);
     setLocal(KEYS.USERS, users);
     setLocal(KEYS.SESSION, newUser);
     this.syncSessionCookies(newUser);
-    return newUser;
+    return { success: true, user: newUser };
   },
 
-  switchRole(targetRole: 'admin' | 'customer'): any {
+  async resetPassword(email: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    const users = getLocal<any[]>(KEYS.USERS, []);
+    const idx = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) {
+      return { success: false, error: 'No account found with this email address.' };
+    }
+    const passwordHash = await hashPassword(newPassword);
+    users[idx].passwordHash = passwordHash;
+    setLocal(KEYS.USERS, users);
+
+    const session = getLocal<any>(KEYS.SESSION, null);
+    if (session && session.email.toLowerCase() === email.toLowerCase()) {
+      session.passwordHash = passwordHash;
+      setLocal(KEYS.SESSION, session);
+    }
+    return { success: true };
+  },
+
+  async switchRole(targetRole: 'admin' | 'customer'): Promise<any> {
     const targetEmail = targetRole === 'admin' ? 'admin@venuss.co.in' : 'customer@venuss.co.in';
-    return this.login(targetEmail, targetRole);
+    const res = await this.login(targetEmail, undefined, targetRole);
+    return res.user;
+  },
+
+  // --- COMMERCIAL INQUIRIES & QUOTE REQUESTS ---
+  async getInquiries(userId?: string, email?: string): Promise<CommercialInquiry[]> {
+    const submissions = getLocal<CommercialInquiry[]>(KEYS.INQUIRIES, []);
+    if (!userId && !email) return submissions;
+    return submissions.filter(s => {
+      const matchEmail = email && s.email && s.email.toLowerCase() === email.toLowerCase();
+      const matchUser = userId && s.user_id && s.user_id === userId;
+      return matchEmail || matchUser;
+    });
+  },
+
+  async getInquiryById(id: string): Promise<CommercialInquiry | null> {
+    const submissions = getLocal<CommercialInquiry[]>(KEYS.INQUIRIES, []);
+    return submissions.find(s => s.id === id) || null;
+  },
+
+  async saveInquiry(inquiry: Partial<CommercialInquiry>): Promise<CommercialInquiry> {
+    const trimmedName = inquiry.name?.trim();
+    if (!trimmedName) {
+      throw new Error('Please provide your name or business representative name.');
+    }
+
+    const trimmedEmail = inquiry.email?.trim().toLowerCase();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      throw new Error('Please provide a valid business email address.');
+    }
+
+    const trimmedMessage = inquiry.message?.trim();
+    if (!trimmedMessage) {
+      throw new Error('Please provide your requirements or enquiry message.');
+    }
+
+    const inqType = inquiry.inquiry_type || 'quote';
+    const currentYear = new Date().getFullYear();
+    const randSuffix = Math.floor(1000 + Math.random() * 9000);
+    const prefix = (
+      inqType === 'quote' ? 'QUO' :
+      inqType === 'sample' ? 'SMP' :
+      inqType === 'export' ? 'EXP' :
+      inqType === 'custom' ? 'CUS' : 'ENQ'
+    );
+    const generatedRef = inquiry.reference_no || `${prefix}-${currentYear}-${randSuffix}`;
+
+    const submissions = getLocal<CommercialInquiry[]>(KEYS.INQUIRIES, []);
+    const newInquiry: CommercialInquiry = {
+      id: inquiry.id || crypto.randomUUID(),
+      reference_no: generatedRef,
+      inquiry_type: inqType,
+      name: trimmedName,
+      email: trimmedEmail,
+      phone: inquiry.phone?.trim() || '',
+      company: inquiry.company?.trim() || '',
+      product_id: inquiry.product_id,
+      product_name: inquiry.product_name?.trim(),
+      product_category: inquiry.product_category?.trim(),
+      quantity: typeof inquiry.quantity === 'number' ? inquiry.quantity : 1,
+      packaging: inquiry.packaging?.trim() || '',
+      destination_country: inquiry.destination_country?.trim() || '',
+      message: trimmedMessage,
+      status: inquiry.status || 'new',
+      user_id: inquiry.user_id,
+      created_at: inquiry.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    submissions.unshift(newInquiry);
+    setLocal(KEYS.INQUIRIES, submissions);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-inquiries-updated', { detail: { action: 'save', inquiry: newInquiry } }));
+    }
+
+    return newInquiry;
+  },
+
+  async updateInquiryStatus(id: string, status: CommercialInquiry['status']): Promise<CommercialInquiry | null> {
+    const submissions = getLocal<CommercialInquiry[]>(KEYS.INQUIRIES, []);
+    const idx = submissions.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      submissions[idx] = {
+        ...submissions[idx],
+        status,
+        updated_at: new Date().toISOString()
+      };
+      setLocal(KEYS.INQUIRIES, submissions);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('venuss-inquiries-updated', { detail: { action: 'update', inquiry: submissions[idx] } }));
+      }
+      return submissions[idx];
+    }
+    return null;
+  },
+
+  async deleteInquiry(id: string): Promise<boolean> {
+    const submissions = getLocal<CommercialInquiry[]>(KEYS.INQUIRIES, []);
+    const filtered = submissions.filter(s => s.id !== id);
+    setLocal(KEYS.INQUIRIES, filtered);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('venuss-inquiries-updated', { detail: { action: 'delete', id } }));
+    }
+    return true;
   },
 
   // --- REVIEWS ---
@@ -816,3 +1269,4 @@ export const db = {
     return users[idx] || null;
   },
 };
+

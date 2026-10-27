@@ -8,6 +8,7 @@ import GuidedTour from '@/components/GuidedTour';
 import CartFlightManager from '@/components/CartFlightManager';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import CartDrawer from '@/components/CartDrawer';
+import BrandedSplashScreen from '@/components/BrandedSplashScreen';
 
 export const metadata: Metadata = {
   title: {
@@ -42,8 +43,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full scroll-smooth" data-scroll-behavior="smooth">
+    <html lang="en" className="h-full scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased bg-white selection:bg-accent selection:text-white">
+        <BrandedSplashScreen />
         <ToastProvider>
           <AuthProvider>
             <CartProvider>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShoppingCart, ShieldCheck, Leaf, Tag, Truck, Sparkles, Check } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShoppingCart, ShieldCheck, Leaf, Tag, Truck, Sparkles, Check, Package } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useCart } from '@/context/CartContext';
@@ -140,11 +140,13 @@ export default function CartPage() {
             {/* Left Col: Cart Items List */}
             <div className="lg:col-span-8 space-y-4">
               {cart.map((item) => {
+                const itemKey = item.key || item.product_id;
                 const maxStock = item.product.stock_quantity;
                 return (
                   <div 
-                    key={item.product_id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 bg-white border border-slate-200/80 rounded-2xl gap-4 hover:border-slate-350 transition-all"
+                    key={itemKey}
+                    data-cart-item-id={item.product_id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 bg-white border border-slate-200/80 rounded-2xl gap-4 hover:border-slate-350 transition-all shadow-2xs"
                   >
                     {/* Product Details info */}
                     <div className="flex gap-4 items-center">
@@ -153,10 +155,7 @@ export default function CartPage() {
                       </div>
                       <div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
-                          {item.product.category_id === 1 ? 'Oils' :
-                           item.product.category_id === 2 ? 'Serums' :
-                           item.product.category_id === 3 ? 'Mists' :
-                           item.product.category_id === 4 ? 'Scalp Therapy' : 'Sets'}
+                          {item.product.product_range || 'Botanical Extract'}
                         </span>
                         <Link 
                           href={`/products/${item.product.slug}`}
@@ -164,6 +163,12 @@ export default function CartPage() {
                         >
                           {item.name}
                         </Link>
+                        {item.packaging && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 mt-1">
+                            <Package className="w-2.5 h-2.5 text-emerald-600" />
+                            <span>Format: {item.packaging}</span>
+                          </span>
+                        )}
                         <span className="text-[10px] text-slate-400 font-light block mt-0.5">
                           Base Price: ₹{item.price} each (18% GST)
                         </span>
@@ -175,16 +180,19 @@ export default function CartPage() {
                       {/* Quantity Controls */}
                       <div className="flex items-center border border-slate-200 rounded-xl p-0.5 bg-white">
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                          className="p-1.5 rounded-lg hover:bg-slate-50 text-slate-500"
+                          onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          className="p-1.5 rounded-lg hover:bg-slate-50 text-slate-500 disabled:opacity-30 cursor-pointer"
+                          aria-label="Decrease quantity"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
                         <span className="px-3.5 text-xs font-semibold text-primary select-none">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                          onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                           disabled={item.quantity >= maxStock}
-                          className="p-1.5 rounded-lg hover:bg-slate-50 text-slate-500 disabled:opacity-30"
+                          className="p-1.5 rounded-lg hover:bg-slate-50 text-slate-500 disabled:opacity-30 cursor-pointer"
+                          aria-label="Increase quantity"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -202,9 +210,10 @@ export default function CartPage() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeFromCart(item.product_id)}
-                        className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors border border-transparent hover:border-red-100"
+                        onClick={() => removeFromCart(itemKey)}
+                        className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors border border-transparent hover:border-red-100 cursor-pointer"
                         title="Remove item"
+                        aria-label="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

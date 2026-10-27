@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Heart, ShoppingBag, User, LogOut, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff, Leaf, CheckCircle2, Beaker, Sun, Shield } from 'lucide-react';
+import { 
+  Search, Heart, ShoppingBag, ShoppingCart, User, LogOut, Menu, X, 
+  ArrowRight, Mail, Lock, Eye, EyeOff, Leaf, CheckCircle2, Beaker, 
+  Sun, Shield, FileText, Package, MapPin, KeyRound, ChevronRight 
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -29,6 +34,45 @@ const NavbarContent = () => {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [cartImpact, setCartImpact] = useState(false);
   const [wishlistImpact, setWishlistImpact] = useState(false);
+
+  // Customer Account Dropdown states
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [dropdownEmail, setDropdownEmail] = useState('');
+  const [dropdownPassword, setDropdownPassword] = useState('');
+  const [showDropdownPassword, setShowDropdownPassword] = useState(false);
+  const [dropdownRememberMe, setDropdownRememberMe] = useState(true);
+  const [dropdownError, setDropdownError] = useState('');
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+
+  // Close customer account dropdown on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsAccountDropdownOpen(false);
+        const btn = document.getElementById('customer-account-btn');
+        if (btn) btn.focus();
+      }
+    };
+
+    if (isAccountDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAccountDropdownOpen]);
 
   // Sync search input with URL search params
   useEffect(() => {
@@ -80,9 +124,17 @@ const NavbarContent = () => {
           setErrorMsg('Please enter your name.');
           return;
         }
-        await register(loginEmail.trim(), fullName.trim());
+        const res = await register(loginEmail.trim(), fullName.trim(), password);
+        if (!res.success) {
+          setErrorMsg(res.error || 'Failed to create account.');
+          return;
+        }
       } else {
-        await login(loginEmail.trim());
+        const res = await login(loginEmail.trim(), password);
+        if (!res.success) {
+          setErrorMsg(res.error || 'Invalid email or password.');
+          return;
+        }
       }
       
       setLoginSuccess(true);
@@ -96,26 +148,56 @@ const NavbarContent = () => {
         setPassword('');
         setErrorMsg('');
         router.refresh();
-      }, 4000);
+      }, 1500);
       
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred during authentication.');
     }
   };
 
+  const handleDropdownLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDropdownError('');
+    if (!dropdownEmail.trim()) {
+      setDropdownError('Please enter your email address.');
+      return;
+    }
+    if (!dropdownPassword) {
+      setDropdownError('Please enter your password.');
+      return;
+    }
+
+    setDropdownLoading(true);
+    try {
+      const result = await login(dropdownEmail.trim(), dropdownPassword);
+      if (!result.success) {
+        setDropdownError(result.error || 'Invalid email or password.');
+      } else {
+        setIsAccountDropdownOpen(false);
+        setDropdownEmail('');
+        setDropdownPassword('');
+        setDropdownError('');
+      }
+    } catch (err: any) {
+      setDropdownError(err?.message || 'Failed to sign in. Please try again.');
+    } finally {
+      setDropdownLoading(false);
+    }
+  };
+
   return (
     <>
       {/* TOP ANNOUNCEMENT BAR */}
-      <div className="bg-[#1F452C] text-[#B5D3BC] text-[10px] sm:text-xs py-2 px-4 sm:px-8 flex justify-between items-center tracking-wider font-light">
+      <div className="bg-[#173B2B] text-[#D8EADB] text-xs sm:text-[13px] py-2 px-4 sm:px-8 flex justify-between items-center font-medium">
         <div>Venuss Herbo Aromatics — Natural Botanical Extracts & Essential Oils</div>
         <div className="flex gap-4">
-          <Link href="/contact" className="hover:text-[#D4954B] transition-colors">sales@venuss.co.in</Link>
+          <Link href="/contact" className="hover:text-[#E8A555] transition-colors text-[#E5F2E7] font-semibold">sales@venuss.co.in</Link>
           <span className="opacity-40">|</span>
-          <Link href="/contact" className="hover:text-[#D4954B] transition-colors">+91 4563 244154</Link>
+          <Link href="/contact" className="hover:text-[#E8A555] transition-colors text-[#E5F2E7] font-semibold">+91 4563 244154</Link>
         </div>
       </div>
 
-      <header className="sticky top-0 z-50 bg-[#F5F2E9]/98 backdrop-blur-md w-full border-b border-[#2E5E3E]/10 shadow-xs">
+      <header className="sticky top-0 bg-[#F5F2E9]/98 backdrop-blur-md w-full border-b border-[#2E5E3E]/10 shadow-xs" style={{ zIndex: 100 }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-18 gap-6">
             
@@ -136,29 +218,28 @@ const NavbarContent = () => {
               </Link>
             </div>
 
-            {/* Simple Clean Desktop Navigation Links */}
-            <nav id="tour-categories" className="hidden md:flex space-x-6 lg:space-x-8 text-xs font-bold tracking-wider uppercase">
-              <Link href="/" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Home</Link>
-              <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Shop</Link>
-              <Link href="/products" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Categories</Link>
-              <Link href="/about" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">About</Link>
-              <Link href="/about" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Sustainability</Link>
-              <Link href="/contact" className="text-[#6B665A] hover:text-[#2E5E3E] transition-colors py-1">Contact</Link>
+            {/* Simple Clean Desktop Navigation Links (15.5-16px, weight 600) */}
+            <nav className="hidden md:flex items-center space-x-6 lg:space-x-8 text-[15.5px] lg:text-[16px] font-semibold text-[#233F2E]">
+              <Link id="nav-home" href="/" className="hover:text-[#173B2B] transition-colors py-1">Home</Link>
+              <Link id="nav-shop" href="/products" className="hover:text-[#173B2B] transition-colors py-1">Shop</Link>
+              <Link id="nav-categories" href="/#shop-by-category" className="hover:text-[#173B2B] transition-colors py-1">Categories</Link>
+              <Link id="nav-about" href="/about" className="hover:text-[#173B2B] transition-colors py-1">About</Link>
+              <Link id="nav-contact" href="/contact" className="hover:text-[#173B2B] transition-colors py-1">Contact</Link>
             </nav>
 
             {/* Search & Action Icons */}
             <div className="flex items-center space-x-4 sm:space-x-5">
               
               {/* Search Bar matching Reference Image */}
-              <form id="tour-search" onSubmit={handleSearchSubmit} className="hidden sm:flex items-center border border-[#254936]/18 rounded-full bg-white shadow-2xs pl-3.5 pr-1 py-1 focus-within:border-[#102C20] transition-colors">
+              <form id="tour-search" onSubmit={handleSearchSubmit} className="hidden sm:flex items-center border border-[#173B2B]/20 rounded-full bg-white shadow-2xs pl-3.5 pr-1.5 py-1.5 focus-within:border-[#173B2B] transition-colors">
                 <input
                   type="text"
                   placeholder="Search products, extracts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-36 lg:w-48 text-xs font-normal focus:outline-none placeholder:text-[#5F7C5D]/60 text-[#102C20]"
+                  className="w-36 lg:w-52 text-[13.5px] font-medium focus:outline-none placeholder:text-[#5F7C5D]/80 text-[#173B2B]"
                 />
-                <button type="submit" className="w-7 h-7 rounded-full bg-[#102C20] hover:bg-[#1E4533] text-white transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-xs" title="Search">
+                <button type="submit" className="w-7 h-7 rounded-full bg-[#173B2B] hover:bg-[#204E39] text-white transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-xs" title="Search">
                   <Search className="w-3.5 h-3.5" />
                 </button>
               </form>
@@ -167,25 +248,26 @@ const NavbarContent = () => {
               <Link 
                 id="tour-wishlist" 
                 href="/wishlist" 
-                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1"
+                className="flex items-center text-[#173B2B] hover:text-[#D4954B] transition-all relative p-1"
                 title="Wishlist"
               >
                 <div className="relative">
                   <Heart className={`w-5 h-5 ${wishlistImpact ? 'fill-[#D4954B] text-[#D4954B]' : ''}`} />
                   {wishlist.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[9px] font-bold text-white flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[10px] font-bold text-white flex items-center justify-center rounded-full">
                       {wishlist.length}
                     </span>
                   )}
                 </div>
               </Link>
 
-              {/* Account Button & Admin Pill */}
-              <div id="tour-account" className="flex items-center gap-2">
+              {/* Customer Account Button & Interactive Dropdown Menu */}
+              <div id="tour-account" ref={accountDropdownRef} className="relative flex items-center gap-2">
+                {/* Dedicated Admin Console Pill if admin is authenticated */}
                 {user && user.role === 'admin' && (
                   <Link 
                     href="/admin" 
-                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#132A1C] text-[#D4954B] border border-[#D4954B]/30 rounded-full text-[10px] font-bold uppercase tracking-wider hover:bg-[#1a3825] transition-all shadow-xs"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-[#132A1C] text-[#D4954B] border border-[#D4954B]/30 rounded-full text-[11px] font-bold uppercase tracking-wider hover:bg-[#1a3825] transition-all shadow-xs"
                     title="Administrative Control Panel"
                   >
                     <Shield className="w-3 h-3 text-[#D4954B]" />
@@ -193,19 +275,329 @@ const NavbarContent = () => {
                   </Link>
                 )}
 
-                {user ? (
-                  <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-colors p-1" title="Account">
-                    <User className="w-5 h-5 text-[#2E5E3E]" />
-                  </Link>
-                ) : (
-                  <button 
-                    onClick={() => setIsLoginModalOpen(true)} 
-                    className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-colors p-1 focus:outline-none"
-                    title="Account"
+                {/* Profile Button & Dropdown Container */}
+                <div className="relative inline-flex items-center">
+                  <button
+                    id="customer-account-btn"
+                    type="button"
+                    onClick={() => {
+                      setIsAccountDropdownOpen(prev => !prev);
+                      setDropdownError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                        if (!isAccountDropdownOpen) {
+                          e.preventDefault();
+                          setIsAccountDropdownOpen(true);
+                        }
+                      }
+                    }}
+                    aria-expanded={isAccountDropdownOpen}
+                    aria-haspopup="true"
+                    aria-controls="customer-account-dropdown"
+                    className={`flex items-center gap-1.5 p-1.5 rounded-full transition-all focus:outline-none cursor-pointer ${
+                      isAccountDropdownOpen 
+                        ? 'bg-[#173B2B] text-white shadow-xs ring-2 ring-[#D4954B]/50' 
+                        : 'text-[#173B2B] hover:text-[#D4954B] hover:bg-[#173B2B]/5'
+                    }`}
+                    title={user ? `Account (${user.name || user.email})` : "Customer Sign In / Account"}
                   >
-                    <User className="w-5 h-5 text-[#2E5E3E]" />
+                    <User className="w-5 h-5" />
+                    {user && (
+                      <span className="hidden xl:inline text-xs font-semibold max-w-[85px] truncate text-left">
+                        {user.name ? user.name.split(' ')[0] : 'Account'}
+                      </span>
+                    )}
                   </button>
+
+                  {/* Customer Account Dropdown */}
+                  {isAccountDropdownOpen && (
+                    <div 
+                      id="customer-account-dropdown"
+                      role="menu"
+                      aria-label="Customer Account Menu"
+                      tabIndex={-1}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setIsAccountDropdownOpen(false);
+                          document.getElementById('customer-account-btn')?.focus();
+                        }
+                      }}
+                      className="customer-account-dropdown-panel bg-[#FAF9F5] border border-[#173B2B]/20 rounded-2xl shadow-2xl p-4 text-[#173B2B] font-sans animate-slide-up"
+                    >
+                    {!user ? (
+                      /* SIGNED OUT STATE: Clean Customer Sign-In */
+                      <div>
+                        {/* Header */}
+                        <div className="border-b border-[#173B2B]/10 pb-3 mb-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold tracking-wider uppercase text-[#5F7C5D] flex items-center gap-1">
+                              <Leaf className="w-3 h-3 text-[#5F7C5D]" /> Venuss Account
+                            </span>
+                            <span className="text-[10px] bg-[#173B2B]/10 text-[#173B2B] px-2 py-0.5 rounded-full font-medium">Customer</span>
+                          </div>
+                          <h3 className="text-base font-serif font-bold text-[#173B2B] mt-1">Sign In to Your Account</h3>
+                          <p className="text-xs text-[#5F7C5D] font-light mt-0.5">Access orders, quotes & botanical wishlist</p>
+                        </div>
+
+                        {/* Error Alert */}
+                        {dropdownError && (
+                          <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-1.5 leading-snug">
+                            <span className="shrink-0 text-red-500 font-bold">!</span>
+                            <span>{dropdownError}</span>
+                          </div>
+                        )}
+
+                        {/* Dropdown Mini Sign-in Form */}
+                        <form onSubmit={handleDropdownLogin} className="space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#173B2B]/80 mb-1">
+                              Email Address
+                            </label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5F7C5D]" />
+                              <input
+                                id="nav-dropdown-email"
+                                type="email"
+                                value={dropdownEmail}
+                                onChange={(e) => setDropdownEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                required
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-[#173B2B]/20 rounded-xl text-xs text-[#173B2B] placeholder:text-slate-400 focus:outline-none focus:border-[#173B2B] focus:ring-1 focus:ring-[#173B2B]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#173B2B]/80">
+                                Password
+                              </label>
+                              <Link 
+                                href="/account?tab=forgot"
+                                onClick={() => setIsAccountDropdownOpen(false)}
+                                className="text-[10px] text-[#D4954B] hover:text-[#b37936] font-semibold hover:underline"
+                              >
+                                Forgot?
+                              </Link>
+                            </div>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5F7C5D]" />
+                              <input
+                                id="nav-dropdown-password"
+                                type={showDropdownPassword ? 'text' : 'password'}
+                                value={dropdownPassword}
+                                onChange={(e) => setDropdownPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                className="w-full pl-9 pr-9 py-2 bg-white border border-[#173B2B]/20 rounded-xl text-xs text-[#173B2B] placeholder:text-slate-400 focus:outline-none focus:border-[#173B2B] focus:ring-1 focus:ring-[#173B2B]"
+                              />
+                              <button
+                                id="nav-dropdown-toggle-password"
+                                type="button"
+                                onClick={() => setShowDropdownPassword(!showDropdownPassword)}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                title={showDropdownPassword ? "Hide password" : "Show password"}
+                              >
+                                {showDropdownPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-0.5">
+                            <label className="flex items-center gap-1.5 text-[11px] text-[#173B2B]/80 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={dropdownRememberMe}
+                                onChange={(e) => setDropdownRememberMe(e.target.checked)}
+                                className="rounded border-[#173B2B]/30 text-[#173B2B] focus:ring-0"
+                              />
+                              <span>Remember me</span>
+                            </label>
+                          </div>
+
+                          <button
+                            id="nav-dropdown-submit"
+                            type="submit"
+                            disabled={dropdownLoading}
+                            className="w-full py-2.5 bg-[#173B2B] hover:bg-[#204E39] disabled:opacity-60 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                          >
+                            {dropdownLoading ? (
+                              <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <span>Sign In</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </>
+                            )}
+                          </button>
+                        </form>
+
+                        <div className="border-t border-[#173B2B]/10 mt-3 pt-3 space-y-2">
+                          <Link
+                            id="nav-dropdown-register-btn"
+                            href="/account?tab=register"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="w-full block text-center py-2 bg-white hover:bg-slate-50 border border-[#173B2B]/20 text-[#173B2B] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs"
+                          >
+                            Create Customer Account
+                          </Link>
+                          <div className="text-center">
+                            <Link
+                              href="/account"
+                              onClick={() => setIsAccountDropdownOpen(false)}
+                              className="text-[11px] text-[#5F7C5D] hover:text-[#173B2B] font-medium hover:underline inline-flex items-center gap-1"
+                            >
+                              <span>Open full account portal</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* SIGNED IN STATE: Customer Profile & Account Links */
+                      <div>
+                        {/* Header with verified user identity */}
+                        <div className="border-b border-[#173B2B]/10 pb-3 mb-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-[#173B2B] text-[#FAF9F5] flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                              {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-bold text-[#173B2B] truncate">{user.name || 'Valued Customer'}</p>
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                                  user.role === 'admin' 
+                                    ? 'bg-[#D4954B]/20 text-[#9C6524] border border-[#D4954B]/40' 
+                                    : 'bg-[#5F7C5D]/15 text-[#2E5E3E] border border-[#5F7C5D]/30'
+                                }`}>
+                                  {user.role === 'admin' ? 'Administrator' : 'Customer'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-[#5F7C5D] truncate font-light">{user.email}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Customer specific navigation links */}
+                        <div className="space-y-0.5 text-xs font-medium">
+                          <Link
+                            href="/account"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <User className="w-4 h-4 text-[#5F7C5D]" />
+                              <span>My Account Overview</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+
+                          <Link
+                            href="/account?tab=profile"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <KeyRound className="w-4 h-4 text-[#5F7C5D]" />
+                              <span>My Profile & Security</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+
+                          <Link
+                            href="/account?tab=enquiries"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <FileText className="w-4 h-4 text-[#5F7C5D]" />
+                              <span>My Enquiries / Quote Requests</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+
+                          <Link
+                            href="/account?tab=orders"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Package className="w-4 h-4 text-[#5F7C5D]" />
+                              <span>My Orders & Invoices</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+
+                          <Link
+                            href="/wishlist"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Heart className="w-4 h-4 text-[#D4954B]" />
+                              <span>Saved Products / Wishlist</span>
+                            </div>
+                            {wishlist.length > 0 && (
+                              <span className="px-2 py-0.5 bg-[#D4954B] text-white rounded-full text-[10px] font-bold">
+                                {wishlist.length}
+                              </span>
+                            )}
+                          </Link>
+
+                          <Link
+                            href="/account?tab=addresses"
+                            onClick={() => setIsAccountDropdownOpen(false)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#173B2B]/8 text-[#173B2B] transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <MapPin className="w-4 h-4 text-[#5F7C5D]" />
+                              <span>Addresses</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </Link>
+                        </div>
+
+                        {/* Dedicated Admin Console Link (ONLY visible if user.role === 'admin') */}
+                        {user.role === 'admin' && (
+                          <div className="border-t border-[#173B2B]/10 my-2 pt-2">
+                            <Link
+                              href="/admin"
+                              onClick={() => setIsAccountDropdownOpen(false)}
+                              className="flex items-center justify-between p-2 rounded-xl bg-[#132A1C] text-[#D4954B] hover:bg-[#1c3e29] transition-colors shadow-2xs font-semibold text-xs"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Shield className="w-4 h-4 text-[#D4954B]" />
+                                <span>Admin Console</span>
+                              </div>
+                              <span className="text-[10px] uppercase tracking-wider bg-[#D4954B]/20 text-[#D4954B] px-2 py-0.5 rounded-full font-bold">
+                                Admin
+                              </span>
+                            </Link>
+                          </div>
+                        )}
+
+                        {/* Sign Out Button */}
+                        <div className="border-t border-[#173B2B]/10 mt-2.5 pt-2">
+                          <button
+                            id="nav-customer-signout"
+                            type="button"
+                            onClick={() => {
+                              logout();
+                              setIsAccountDropdownOpen(false);
+                              router.refresh();
+                            }}
+                            className="w-full flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors uppercase tracking-wider cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
+                </div>
               </div>
 
               {/* Cart Button with Slide-out Drawer */}
@@ -213,13 +605,13 @@ const NavbarContent = () => {
                 id="tour-cart" 
                 type="button"
                 onClick={openCartDrawer} 
-                className="flex items-center text-[#2E5E3E] hover:text-[#D4954B] transition-all relative p-1 cursor-pointer"
+                className="flex items-center text-[#173B2B] hover:text-[#D4954B] transition-all relative p-1 cursor-pointer"
                 title="View Cart"
               >
                 <div className="relative">
-                  <ShoppingBag className="w-5 h-5 text-[#2E5E3E]" />
+                  <ShoppingCart className="w-5 h-5 text-[#173B2B]" />
                   {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[9px] font-bold text-white flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4954B] text-[10px] font-bold text-white flex items-center justify-center rounded-full">
                       {totalItems}
                     </span>
                   )}
@@ -229,7 +621,7 @@ const NavbarContent = () => {
               {/* Mobile Menu Icon */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-1 text-[#2E5E3E] hover:text-[#D4954B] transition-colors"
+                className="md:hidden p-1 text-[#173B2B] hover:text-[#D4954B] transition-colors"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -241,7 +633,7 @@ const NavbarContent = () => {
 
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-[#2E5E3E]/10 bg-[#F5F2E9]/98 backdrop-blur-lg px-4 pt-3 pb-6 space-y-4 animate-fade-in">
+          <div className="md:hidden border-t border-[#173B2B]/10 bg-[#F5F2E9]/98 backdrop-blur-lg px-4 pt-3 pb-6 space-y-4 animate-fade-in">
             {/* Search (Mobile) */}
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
@@ -249,15 +641,16 @@ const NavbarContent = () => {
                 placeholder="Search catalog..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#2E5E3E]/20 rounded-full text-sm focus:outline-none text-[#2E5E3E]"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#173B2B]/20 rounded-full text-[14.5px] focus:outline-none text-[#173B2B]"
               />
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
             </form>
-            <div className="flex flex-col space-y-2.5 font-bold text-xs uppercase tracking-wider text-[#2E5E3E]">
+            <div className="flex flex-col space-y-2.5 font-bold text-[16px] text-[#173B2B]">
               <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Home</Link>
-              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Shop Catalog</Link>
-              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">About Our Distilleries</Link>
-              <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Contact & Quotes</Link>
+              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Shop</Link>
+              <Link href="/#shop-by-category" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Categories</Link>
+              <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">About</Link>
+              <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50">Contact</Link>
               <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#D4954B] py-2 border-b border-slate-200/50 flex items-center justify-between">
                 <span>Saved Wishlist</span>
                 {wishlist.length > 0 && (
@@ -282,27 +675,72 @@ const NavbarContent = () => {
               <div className="pt-2 border-t border-[#2E5E3E]/15">
                 {user ? (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 py-1 text-slate-600 normal-case font-normal text-xs">
-                      <User className="w-4 h-4 text-[#2E5E3E]" />
-                      <span className="font-semibold text-[#132A1C]">{user.name || user.email}</span>
+                    <div className="flex items-center justify-between py-1 px-1 text-slate-600 normal-case font-normal text-xs">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-[#2E5E3E]" />
+                        <span className="font-semibold text-[#132A1C]">{user.name || user.email}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#173B2B]/10 font-bold uppercase text-[#173B2B]">
+                        {user.role === 'admin' ? 'Admin' : 'Customer'}
+                      </span>
                     </div>
+
                     {user.role === 'admin' && (
                       <Link 
                         href="/admin" 
                         onClick={() => setIsMobileMenuOpen(false)} 
-                        className="flex items-center gap-2 py-1.5 text-[#D4954B] hover:text-[#b37936]"
+                        className="flex items-center gap-2 py-1.5 text-[#D4954B] hover:text-[#b37936] font-semibold text-xs"
                       >
                         <Shield className="w-4 h-4" />
                         <span>Admin Console</span>
                       </Link>
                     )}
-                    <Link 
-                      href="/dashboard" 
-                      onClick={() => setIsMobileMenuOpen(false)} 
-                      className="block py-1 text-[#2E5E3E] hover:text-[#D4954B]"
-                    >
-                      My Dashboard & Orders
-                    </Link>
+
+                    <div className="grid grid-cols-2 gap-1 text-xs py-1">
+                      <Link 
+                        href="/account" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#2E5E3E] font-medium"
+                      >
+                        Account Overview
+                      </Link>
+                      <Link 
+                        href="/account?tab=profile" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#2E5E3E] font-medium"
+                      >
+                        Profile & Security
+                      </Link>
+                      <Link 
+                        href="/account?tab=enquiries" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#2E5E3E] font-medium"
+                      >
+                        My Enquiries
+                      </Link>
+                      <Link 
+                        href="/account?tab=orders" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#2E5E3E] font-medium"
+                      >
+                        My Orders
+                      </Link>
+                      <Link 
+                        href="/account?tab=addresses" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#2E5E3E] font-medium"
+                      >
+                        Addresses
+                      </Link>
+                      <Link 
+                        href="/wishlist" 
+                        onClick={() => setIsMobileMenuOpen(false)} 
+                        className="p-1.5 bg-white/70 rounded-lg text-[#D4954B] font-medium"
+                      >
+                        Wishlist ({wishlist.length})
+                      </Link>
+                    </div>
+
                     <button
                       onClick={() => {
                         logout();
@@ -317,11 +755,11 @@ const NavbarContent = () => {
                 ) : (
                   <div className="flex flex-col gap-2 pt-1">
                     <Link
-                      href="/login"
+                      href="/account"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="w-full text-center py-2.5 bg-[#2E5E3E] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs"
                     >
-                      Sign In / Register
+                      Customer Sign In / Register
                     </Link>
                     <Link
                       href="/admin/login"
@@ -360,14 +798,14 @@ const NavbarContent = () => {
               
               <div className="relative z-10">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-300 flex items-center gap-1">
-                  <Leaf className="w-3.5 h-3.5" /> Nourish. Care. Shine.
+                  <Leaf className="w-3.5 h-3.5" /> Venuss Herbo Aromatics
                 </span>
                 <h2 className="text-3xl font-serif font-semibold mt-4 leading-tight tracking-tight max-w-xs">
-                  Stronger Roots, <br />
-                  <span className="text-emerald-300">Beautiful You.</span>
+                  Nature, Extracted <br />
+                  <span className="text-emerald-300">with Precision.</span>
                 </h2>
                 <p className="text-xs text-slate-300 font-light mt-3 leading-relaxed max-w-xs">
-                  Premium hair care solutions made with nature's finest ingredients.
+                  Pure essential oils, aromatic absolutes, and wildcrafted botanical extracts for connoisseurs and commercial formulators.
                 </p>
               </div>
 
@@ -375,18 +813,18 @@ const NavbarContent = () => {
               <div className="grid grid-cols-3 gap-3 relative z-10 border-t border-white/10 pt-6 mt-8">
                 <div className="flex flex-col items-start text-left">
                   <Leaf className="w-5 h-5 text-emerald-300 mb-2" />
-                  <span className="text-[10px] font-bold text-white leading-tight">100% Natural</span>
-                  <span className="text-[9px] text-slate-300 font-light">Ingredients</span>
+                  <span className="text-[10px] font-bold text-white leading-tight">100% Pure</span>
+                  <span className="text-[9px] text-slate-300 font-light">Natural Extracts</span>
                 </div>
                 <div className="flex flex-col items-start text-left">
                   <CheckCircle2 className="w-5 h-5 text-emerald-300 mb-2" />
-                  <span className="text-[10px] font-bold text-white leading-tight">Clinically</span>
-                  <span className="text-[9px] text-slate-300 font-light">Tested</span>
+                  <span className="text-[10px] font-bold text-white leading-tight">Batch Tested</span>
+                  <span className="text-[9px] text-slate-300 font-light">GC-MS Certified</span>
                 </div>
                 <div className="flex flex-col items-start text-left">
                   <Beaker className="w-5 h-5 text-emerald-300 mb-2" />
-                  <span className="text-[10px] font-bold text-white leading-tight">Safe &</span>
-                  <span className="text-[9px] text-slate-300 font-light">Effective</span>
+                  <span className="text-[10px] font-bold text-white leading-tight">Sustainable</span>
+                  <span className="text-[9px] text-slate-300 font-light">Ethical Sourcing</span>
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
 @theme {
@@ -8,8 +8,9 @@
   --color-accent: #D4954B;
   --color-accent-gold: #D48B38;
   --color-accent-light: #E2A65E;
-  --font-sans: 'Outfit', 'Inter', sans-serif;
-  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
   --animate-fade-in: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-up: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -24,12 +25,250 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-body {
-  background-color: #F5F2E9;
-  color: #3A372E;
-  font-family: var(--font-sans);
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+@keyframes splash-bar {
+  0% { transform: scaleX(0); transform-origin: left; }
+  60% { transform: scaleX(0.75); transform-origin: left; }
+  100% { transform: scaleX(1); transform-origin: left; }
+}
+
+.animate-splash-bar {
+  animation: splash-bar 3.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* =========================================================================
+   LIVE BOTANICAL BUTTERFLY 3D FLUTTER & FLIGHT KEYFRAMES
+   ========================================================================= */
+
+/* Left Wing 3D Flap (Hinge on Right Edge / Torso boundary) */
+@keyframes butterfly-flap-left {
+  0%, 100% {
+    transform: rotateY(0deg) rotateZ(0deg);
+  }
+  12% {
+    transform: rotateY(68deg) rotateZ(-3deg);
+  }
+  24% {
+    transform: rotateY(6deg) rotateZ(1deg);
+  }
+  36% {
+    transform: rotateY(70deg) rotateZ(-4deg);
+  }
+  48% {
+    transform: rotateY(10deg) rotateZ(1deg);
+  }
+  60% {
+    transform: rotateY(62deg) rotateZ(-3deg);
+  }
+  72% {
+    transform: rotateY(12deg) rotateZ(0deg);
+  }
+  86% {
+    transform: rotateY(28deg) rotateZ(-1deg);
+  }
+}
+
+/* Right Wing 3D Flap (Hinge on Left Edge / Torso boundary) */
+@keyframes butterfly-flap-right {
+  0%, 100% {
+    transform: rotateY(0deg) rotateZ(0deg);
+  }
+  12% {
+    transform: rotateY(-68deg) rotateZ(3deg);
+  }
+  24% {
+    transform: rotateY(-6deg) rotateZ(-1deg);
+  }
+  36% {
+    transform: rotateY(-70deg) rotateZ(4deg);
+  }
+  48% {
+    transform: rotateY(-10deg) rotateZ(-1deg);
+  }
+  60% {
+    transform: rotateY(-62deg) rotateZ(3deg);
+  }
+  72% {
+    transform: rotateY(-12deg) rotateZ(0deg);
+  }
+  86% {
+    transform: rotateY(-28deg) rotateZ(1deg);
+  }
+}
+
+/* Natural flight pitch & bobbing wobble */
+@keyframes butterfly-flight-bob {
+  0%, 100% {
+    transform: translateY(0px) rotateZ(-1.5deg) scale(1);
+  }
+  30% {
+    transform: translateY(-8px) rotateZ(2deg) scale(1.02);
+  }
+  65% {
+    transform: translateY(-3px) rotateZ(-0.5deg) scale(0.99);
+  }
+  85% {
+    transform: translateY(-11px) rotateZ(1.5deg) scale(1.01);
+  }
+}
+
+/* Butterfly 1 Flight Path: Ivory Swallowtail across upper canopy */
+@keyframes flight-ivory-canopy {
+  0% {
+    transform: translate3d(8vw, 18vh, 0) rotate(22deg);
+  }
+  20% {
+    transform: translate3d(24vw, 22vh, 0) rotate(15deg);
+  }
+  38% {
+    transform: translate3d(40vw, 16vh, 0) rotate(-6deg);
+  }
+  55% {
+    transform: translate3d(58vw, 20vh, 0) rotate(8deg);
+  }
+  72% {
+    transform: translate3d(72vw, 12vh, 0) rotate(-22deg);
+  }
+  85% {
+    transform: translate3d(52vw, 8vh, 0) rotate(-45deg);
+  }
+  94% {
+    transform: translate3d(22vw, 10vh, 0) rotate(10deg);
+  }
+  100% {
+    transform: translate3d(8vw, 18vh, 0) rotate(22deg);
+  }
+}
+
+/* Butterfly 2 Flight Path: Golden Swallowtail dancing near right archway */
+@keyframes flight-golden-arch {
+  0% {
+    transform: translate3d(82vw, 36vh, 0) rotate(-35deg);
+  }
+  22% {
+    transform: translate3d(70vw, 44vh, 0) rotate(-18deg);
+  }
+  42% {
+    transform: translate3d(65vw, 38vh, 0) rotate(12deg);
+  }
+  60% {
+    transform: translate3d(74vw, 54vh, 0) rotate(42deg);
+  }
+  78% {
+    transform: translate3d(84vw, 46vh, 0) rotate(-10deg);
+  }
+  90% {
+    transform: translate3d(86vw, 32vh, 0) rotate(-48deg);
+  }
+  100% {
+    transform: translate3d(82vw, 36vh, 0) rotate(-35deg);
+  }
+}
+
+/* Butterfly 3 Flight Path: Citrine Glider across lower garden */
+@keyframes flight-citrine-lower {
+  0% {
+    transform: translate3d(14vw, 76vh, 0) rotate(18deg);
+  }
+  25% {
+    transform: translate3d(32vw, 72vh, 0) rotate(8deg);
+  }
+  50% {
+    transform: translate3d(54vw, 78vh, 0) rotate(-12deg);
+  }
+  72% {
+    transform: translate3d(74vw, 70vh, 0) rotate(-30deg);
+  }
+  88% {
+    transform: translate3d(48vw, 84vh, 0) rotate(5deg);
+  }
+  100% {
+    transform: translate3d(14vw, 76vh, 0) rotate(18deg);
+  }
+}
+
+/* Butterfly 4 Flight Path: Active Forager near left foliage and copper alembic */
+@keyframes flight-forager-left {
+  0% {
+    transform: translate3d(10vw, 42vh, 0) rotate(14deg);
+  }
+  25% {
+    transform: translate3d(18vw, 34vh, 0) rotate(-10deg);
+  }
+  50% {
+    transform: translate3d(22vw, 50vh, 0) rotate(28deg);
+  }
+  75% {
+    transform: translate3d(12vw, 56vh, 0) rotate(-22deg);
+  }
+  100% {
+    transform: translate3d(10vw, 42vh, 0) rotate(14deg);
+  }
+}
+
+/* Butterfly 5 Flight Path: Distant Ethereal Swallowtail in sunbeams */
+@keyframes flight-ethereal-high {
+  0% {
+    transform: translate3d(52vw, 10vh, 0) rotate(15deg);
+  }
+  35% {
+    transform: translate3d(64vw, 14vh, 0) rotate(-15deg);
+  }
+  70% {
+    transform: translate3d(44vw, 7vh, 0) rotate(-35deg);
+  }
+  100% {
+    transform: translate3d(52vw, 10vh, 0) rotate(15deg);
+  }
+}
+
+/* Falling Jasmine Petal Keyframes */
+@keyframes jasmine-petal-drift {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(120px, 105vh, 0) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+/* Subtle Sunbeam Ray Pulse */
+@keyframes sunbeam-pulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.04);
+  }
+}
+
+html.venuss-splash-active {
+  overflow: hidden !important;
+}
+
+@layer base {
+  body {
+    background-color: #F7F4EA;
+    color: #233F2E;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.015em;
+    color: #173B2B;
+  }
 }
 
 /* Glassmorphic Navigation & Panels (Aesop / Skincare warmth) */
@@ -646,13 +885,6 @@ body {
   z-index: 1;
 }
 
-/* Collection Transitions (top ~860px - 1400px) */
-.botanical-gutter-flora--collection-left {
-  top: 860px;
-  left: -25px;
-  width: 260px;
-  height: 340px;
-}
 
 .botanical-gutter-flora--collection-right {
   top: 890px;
@@ -2289,4 +2521,30 @@ body {
   }
 }
 
+/* Customer Account Profile Dropdown */
+.customer-account-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  z-index: 1000;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 20px 40px -15px rgba(23, 59, 43, 0.25), 0 0 0 1px rgba(23, 59, 43, 0.12);
+}
 
+@media (max-width: 639px) {
+  .customer-account-dropdown-panel {
+    right: -52px;
+    width: calc(100vw - 28px);
+    max-width: 336px;
+  }
+}
+
+@media (min-width: 640px) {
+  .customer-account-dropdown-panel {
+    right: 0;
+    width: 352px;
+  }
+}
+
+/* Venuss Herbo Aromatics Stylesheet */

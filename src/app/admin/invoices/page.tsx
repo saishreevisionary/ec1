@@ -12,6 +12,11 @@ export default function AdminInvoices() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('search');
+      if (s) setSearchQuery(s);
+    }
     loadInvoices();
   }, []);
 
@@ -23,9 +28,11 @@ export default function AdminInvoices() {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesNumber = inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCustomer = inv.orders?.shipping_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
-    return matchesNumber || matchesCustomer;
+    const q = searchQuery.toLowerCase();
+    const matchesNumber = (inv.invoice_number || '').toLowerCase().includes(q);
+    const matchesCustomer = (inv.orders?.shipping_name || '').toLowerCase().includes(q);
+    const matchesOrder = (inv.order_id || '').toLowerCase().includes(q);
+    return matchesNumber || matchesCustomer || matchesOrder;
   });
 
   if (loading) {
@@ -142,7 +149,21 @@ export default function AdminInvoices() {
                   <h3 className="text-xl font-bold uppercase tracking-wide text-primary">GST TAX INVOICE</h3>
                   <p className="text-xs font-semibold text-primary mt-1">Invoice #{activeInvoice.invoice_number.toUpperCase()}</p>
                   <p className="text-xs text-slate-400 font-light mt-0.5">Date: {new Date(activeInvoice.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                  <p className="text-xs text-emerald-600 font-medium">Status: Paid (UPI QR-Verify)</p>
+                  <p className={`text-xs font-medium ${
+                    activeInvoice.orders.payment_verified || ['confirmed', 'shipped', 'delivered'].includes(activeInvoice.orders.status)
+                      ? 'text-emerald-600'
+                      : activeInvoice.orders.status === 'cancelled'
+                      ? 'text-red-600'
+                      : 'text-amber-600'
+                  }`}>
+                    Status: {
+                      activeInvoice.orders.payment_verified || ['confirmed', 'shipped', 'delivered'].includes(activeInvoice.orders.status)
+                        ? 'Paid & Verified (UPI QR)'
+                        : activeInvoice.orders.status === 'cancelled'
+                        ? 'Cancelled'
+                        : 'Payment Verification Pending'
+                    }
+                  </p>
                 </div>
               </div>
 
