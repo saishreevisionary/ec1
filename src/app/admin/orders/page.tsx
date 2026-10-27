@@ -40,13 +40,30 @@ export default function AdminOrders() {
 
   useEffect(() => {
     loadOrders();
+
+    const handleOrdersUpdated = () => {
+      loadOrders();
+    };
+
+    window.addEventListener('venuss-orders-updated', handleOrdersUpdated);
+    window.addEventListener('storage', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('venuss-orders-updated', handleOrdersUpdated);
+      window.removeEventListener('storage', handleOrdersUpdated);
+    };
   }, []);
 
   const loadOrders = async () => {
     setLoading(true);
-    const list = await db.getOrders();
-    setOrders(list);
-    setLoading(false);
+    try {
+      const list = await db.getOrders();
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -108,12 +125,13 @@ export default function AdminOrders() {
 
   // Filter orders
   const filteredOrders = orders.filter(o => {
+    if (!o) return false;
     const matchesSearch = 
-      o.shipping_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.shipping_phone?.includes(searchQuery);
+      (o.shipping_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (o.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.shipping_phone || '').includes(searchQuery);
     
-    const matchesStatus = statusFilter === 'all' || o.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesStatus = statusFilter === 'all' || (o.status || '').toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
@@ -221,10 +239,10 @@ export default function AdminOrders() {
                   return (
                     <tr key={ord.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-3 font-mono font-bold text-[#132A1C]">
-                        #{ord.id.substring(0, 8).toUpperCase()}
+                        #{ord.id ? ord.id.substring(0, 8).toUpperCase() : 'UNKNOWN'}
                       </td>
                       <td className="py-3.5 px-3">
-                        {new Date(ord.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {ord.created_at ? new Date(ord.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent'}
                       </td>
                       <td className="py-3.5 px-3">
                         <div>
@@ -382,20 +400,29 @@ export default function AdminOrders() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-              {selectedOrder.payment_screenshot_url ? (
-                <button
-                  onClick={() => setPreviewScreenshotUrl(resolveScreenshot(selectedOrder.payment_screenshot_url))}
-                  className="text-xs text-[#D4954B] hover:underline font-semibold flex items-center gap-1"
+            <div className="pt-2 border-t border-slate-100 flex justify-between items-center flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                {selectedOrder.payment_screenshot_url && (
+                  <button
+                    onClick={() => setPreviewScreenshotUrl(resolveScreenshot(selectedOrder.payment_screenshot_url))}
+                    className="text-xs text-[#D4954B] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View UPI Payment Proof</span>
+                  </button>
+                )}
+                <a
+                  href={`/admin/invoices?search=${selectedOrder.id ? selectedOrder.id.slice(0, 8) : ''}`}
+                  className="text-xs text-slate-600 hover:text-[#132A1C] hover:underline font-medium flex items-center gap-1"
                 >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View UPI Payment Proof</span>
-                </button>
-              ) : <div />}
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>View Tax Invoice</span>
+                </a>
+              </div>
               
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="px-5 py-2 bg-[#132A1C] hover:bg-[#1f3f2b] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs"
+                className="px-5 py-2 bg-[#132A1C] hover:bg-[#1f3f2b] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs cursor-pointer"
               >
                 Close View
               </button>

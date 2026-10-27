@@ -34,9 +34,9 @@ export default function AdminDashboardOverview() {
     const orders = await db.getOrders();
     const customers = await db.getCustomers();
 
-    // Calculations
-    const activeOrders = orders.filter(o => o.status !== 'cancelled');
-    const revenue = activeOrders.reduce((sum, o) => sum + Number(o.grand_total), 0);
+    // Calculations: Distinguish verified revenue from pending payments and exclude cancelled orders
+    const verifiedOrders = orders.filter(o => o.payment_verified || ['confirmed', 'shipped', 'delivered'].includes(o.status));
+    const revenue = verifiedOrders.reduce((sum, o) => sum + Number(o.grand_total || 0), 0);
     
     const lowStock = products.filter(p => p.stock_quantity <= p.low_stock_threshold);
     const pendingOrders = orders.filter(o => o.status === 'pending');
@@ -76,7 +76,7 @@ export default function AdminDashboardOverview() {
   };
 
   const handleOrderApprove = async (id: string) => {
-    await db.updateOrderStatus(id, 'confirmed');
+    await db.updateOrderStatus(id, 'confirmed', { payment_verified: true });
     loadDashboardStats();
   };
 

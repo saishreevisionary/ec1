@@ -27,6 +27,11 @@ export default function BrandIntro() {
 
   const handleComplete = useCallback(() => {
     setIsFading(true);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('venuss_intro_seen', 'true');
+      } catch (e) {}
+    }
     // Smooth 750ms dissolve into the homepage
     const exitTimer = setTimeout(() => {
       setIsExited(true);
@@ -53,9 +58,12 @@ export default function BrandIntro() {
     const urlParams = new URLSearchParams(window.location.search);
     const isFrozen = urlParams.has('freeze') || urlParams.has('pause');
 
-    // NOTE FOR TESTING: Per user instructions, we temporarily do NOT check sessionStorage
-    // so the intro plays on EVERY refresh of localhost:3000.
-    // (After visual approval, sessionStorage guard can be restored).
+    // Restore sessionStorage check so intro plays once per browser session
+    const hasSeenIntro = sessionStorage.getItem('venuss_intro_seen');
+    if (hasSeenIntro && !isFrozen) {
+      setIsExited(true);
+      return;
+    }
 
     if (isReduced) {
       setStep(4);
@@ -105,7 +113,8 @@ export default function BrandIntro() {
   return (
     <aside
       aria-label="Venuss Cinematic Botanical Garden Introduction"
-      className={`fixed inset-0 z-[9999] pointer-events-auto select-none overflow-hidden transition-opacity duration-750 ease-out ${
+      onClick={handleSkip}
+      className={`fixed inset-0 z-[9999] pointer-events-auto select-none overflow-hidden transition-opacity duration-750 ease-out cursor-pointer ${
         isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
       style={{

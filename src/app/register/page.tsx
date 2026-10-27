@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, User, ArrowRight, Leaf, CheckCircle2, AlertCircle, UserPlus } from 'lucide-react';
+import { Mail, User, Lock, Eye, EyeOff, ArrowRight, Leaf, CheckCircle2, AlertCircle, UserPlus, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
@@ -15,11 +15,15 @@ function RegisterContent() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const redirectTo = searchParams.get('from') || '/dashboard';
+  const redirectTo = searchParams.get('from') || '/account';
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -44,19 +48,30 @@ function RegisterContent() {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
+    if (!password || password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+    if (!acceptTerms) {
+      setErrorMsg('Please agree to the Terms of Service & Privacy Policy.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await register(email.trim(), name.trim());
-      setIsSuccess(true);
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          const session = localStorage.getItem('lendorastore_session');
-          if (session) {
-            router.push(redirectTo);
-          }
-        }
-      }, 600);
+      const res = await register(email.trim(), name.trim(), password);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Failed to create account.');
+      } else {
+        setIsSuccess(true);
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 600);
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -94,7 +109,7 @@ function RegisterContent() {
               <UserPlus className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold font-serif text-[#2E5E3E]">Create Account</h1>
-            <p className="text-sm text-[#3A372E]/60 font-light mt-1">Join the Venuss community</p>
+            <p className="text-sm text-[#3A372E]/60 font-light mt-1">Join Venuss Herbo Aromatics</p>
           </div>
 
           {/* Card */}
@@ -106,7 +121,7 @@ function RegisterContent() {
                   <CheckCircle2 className="w-7 h-7 text-[#2E5E3E]" />
                 </div>
                 <h2 className="text-lg font-bold font-serif text-[#2E5E3E] mb-2">Account Created!</h2>
-                <p className="text-sm text-slate-500 font-light">Welcome, {name.split(' ')[0]}! Redirecting to your dashboard…</p>
+                <p className="text-sm text-slate-500 font-light">Welcome, {name.split(' ')[0]}! Redirecting to your account…</p>
               </div>
             ) : (
               <>
@@ -115,7 +130,7 @@ function RegisterContent() {
                   id="register-google"
                   onClick={handleGoogleLogin}
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl text-sm text-[#3A372E] font-medium hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all mb-5"
+                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl text-sm text-[#3A372E] font-medium hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all mb-5 cursor-pointer"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -128,7 +143,7 @@ function RegisterContent() {
 
                 <div className="flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-slate-100" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or register with email</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or register with password</span>
                   <div className="flex-1 h-px bg-slate-100" />
                 </div>
 
@@ -176,16 +191,76 @@ function RegisterContent() {
                         className="w-full pl-10 pr-4 py-3 bg-[#FAF9F5] border border-slate-200 rounded-xl text-sm text-[#2E5E3E] placeholder:text-slate-400 font-light focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E] transition-all"
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1 font-light">
-                      We'll send a magic link to verify your email.
-                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="register-password" className="block text-[10px] font-bold uppercase tracking-wider text-[#2E5E3E] mb-1.5">
+                      Password (min 6 characters)
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="register-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="w-full pl-10 pr-10 py-3 bg-[#FAF9F5] border border-slate-200 rounded-xl text-sm text-[#2E5E3E] placeholder:text-slate-400 font-light focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="register-confirm-password" className="block text-[10px] font-bold uppercase tracking-wider text-[#2E5E3E] mb-1.5">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="register-confirm-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="w-full pl-10 pr-10 py-3 bg-[#FAF9F5] border border-slate-200 rounded-xl text-sm text-[#2E5E3E] placeholder:text-slate-400 font-light focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer">
+                      <input
+                        id="register-terms"
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={e => setAcceptTerms(e.target.checked)}
+                        className="mt-0.5 rounded border-slate-300 text-[#2E5E3E] focus:ring-[#2E5E3E]"
+                      />
+                      <span className="font-light text-[11px] leading-relaxed">
+                        I agree to the <span className="text-[#2E5E3E] font-medium underline">Terms of Service</span> and <span className="text-[#2E5E3E] font-medium underline">Privacy Policy</span>.
+                      </span>
+                    </label>
                   </div>
 
                   <button
                     id="register-submit"
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#D4954B] hover:bg-[#BF7A2C] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#D4954B] hover:bg-[#BF7A2C] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.98] cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
@@ -203,13 +278,15 @@ function RegisterContent() {
 
                 {/* Benefits */}
                 <div className="mt-6 pt-5 border-t border-slate-100">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Account Benefits</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#2E5E3E]" /> Customer Privileges
+                  </p>
                   <div className="space-y-1.5">
                     {[
-                      'Track your orders in real-time',
-                      'Save items to your wishlist',
-                      'Manage multiple shipping addresses',
-                      'Access your invoice history',
+                      'Submit and track commercial botanical quote requests',
+                      'Track order dispatch and delivery status',
+                      'Save pure extracts to your personal wishlist',
+                      'Manage delivery addresses and order history',
                     ].map(benefit => (
                       <div key={benefit} className="flex items-center gap-2 text-[11px] text-[#3A372E]/70 font-light">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#2E5E3E] flex-shrink-0" />

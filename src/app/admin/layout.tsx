@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, Package, FolderTree, ShoppingCart, 
   AlertTriangle, Receipt, Users, Settings, LogOut, 
-  Store, Menu, X, ShieldAlert, Star
+  Store, Menu, X, ShieldAlert, Star, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import HairOilLoader from '@/components/HairOilLoader';
@@ -71,6 +71,7 @@ export default function AdminLayout({
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: FolderTree },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Inquiries', href: '/admin/enquiries', icon: MessageSquare },
     { name: 'Reviews', href: '/admin/reviews', icon: Star },
     { name: 'Inventory', href: '/admin/inventory', icon: AlertTriangle },
     { name: 'Customers', href: '/admin/customers', icon: Users },

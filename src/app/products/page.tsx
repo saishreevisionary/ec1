@@ -1,171 +1,348 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Filter, 
   SlidersHorizontal, 
-  ArrowUpDown, 
   X, 
-  Grid, 
   Search, 
-  Sparkles, 
   ChevronRight, 
   ChevronLeft,
   ChevronDown,
-  Check, 
+  ChevronUp,
   RotateCcw,
-  Tag,
-  Layers,
-  Leaf,
-  FlaskConical,
-  Globe,
   LayoutGrid,
-  List
+  List,
+  Leaf,
+  Filter
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import QuickViewModal from '@/components/QuickViewModal';
 import CatalogBotanicalFrame from '@/components/CatalogBotanicalFrame';
-import { ProductGridSkeleton } from '@/components/SkeletonCard';
 import { db } from '@/lib/db';
 import { Product, Category, PRODUCTS, CATEGORIES } from '@/lib/seedData';
 
-const INITIAL_MAX_PRICE = PRODUCTS.length > 0 ? Math.max(...PRODUCTS.map(p => p.price)) : 3000;
+const ALL_RANGES = [
+  'Essential Oils',
+  'Absolutes',
+  'Floral Concretes',
+  'Specialities'
+] as const;
+
+const ALL_APPLICATIONS = [
+  'Fragrance',
+  'Aromatherapy'
+] as const;
+
+const ALL_FAMILIES = [
+  'Floral',
+  'Citrus',
+  'Woody',
+  'Spicy',
+  'Fresh / Green'
+] as const;
 
 function ProductListingContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get('category') || '';
-  const initialQuery = searchParams.get('q') || '';
 
-  // DB States (Initialized with authentic catalog seed data for instant SSR and hydration)
+  // Primary Data State
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [loading, setLoading] = useState(false);
 
-  // Filter States
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(INITIAL_MAX_PRICE);
-  const [maxBoundary, setMaxBoundary] = useState<number>(INITIAL_MAX_PRICE);
-  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
+  // 6 Filter States (Category + 5 Approved Attributes)
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>('');
+  const [selectedRanges, setSelectedRanges] = useState<string[]>([]);
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
+  const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [isOrganicOnly, setIsOrganicOnly] = useState<boolean>(false);
+
+  // Search & Sorting States
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [countrySearch, setCountrySearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
-  const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 12;
-  
-  // Collapsible Section States
-  const [isCollectionsOpen, setIsCollectionsOpen] = useState<boolean>(true);
-  const [isPriceOpen, setIsPriceOpen] = useState<boolean>(true);
-  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState<boolean>(true);
+  const itemsPerPage = 28; // Accommodates all 27 authoritative products with multi-column alignment
 
-  // Mobile Filter Drawer Toggle
+  // Collapsible Sidebar Sections
+  const [isCategoryOpen, setIsCategoryOpen] = useState<boolean>(true);
+  const [isRangeOpen, setIsRangeOpen] = useState<boolean>(true);
+  const [isAppOpen, setIsAppOpen] = useState<boolean>(true);
+  const [isFamilyOpen, setIsFamilyOpen] = useState<boolean>(true);
+  const [isOriginOpen, setIsOriginOpen] = useState<boolean>(true);
+  const [isLabelsOpen, setIsLabelsOpen] = useState<boolean>(true);
+
+  // Mobile Drawer & QuickView
   const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
-  // Load Initial Data from persistent DB (syncs client storage if modified)
-  useEffect(() => {
-    const loadData = async () => {
-      const allProducts = await db.getProducts();
-      const allCategories = await db.getCategories();
-      if (allProducts && allProducts.length > 0) {
-        setProducts(allProducts);
-        const prices = allProducts.map(p => p.price);
-        const highestPrice = Math.max(...prices);
-        setMaxBoundary(highestPrice);
+  // Load from DB (falls back to enriched PRODUCTS & verified CATEGORIES)
+  const loadData = async () => {
+    try {
+      const [dbProducts, dbCats] = await Promise.all([
+        db.getProducts(),
+        db.getCategories()
+      ]);
+      if (dbProducts && dbProducts.length > 0) {
+        setProducts(dbProducts);
       }
-      if (allCategories && allCategories.length > 0) {
-        setCategories(allCategories);
+      if (dbCats && dbCats.length > 0) {
+        setCategories(dbCats);
       }
+    } catch (err) {
+      console.error('Failed to load products/categories:', err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__db = db;
+    }
     loadData();
+
+    // Listen to real-time category updates from admin
+    const handleUpdate = () => {
+      loadData();
+    };
+    window.addEventListener('venuss-categories-updated', handleUpdate);
+    window.addEventListener('venuss-products-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('venuss-categories-updated', handleUpdate);
+      window.removeEventListener('venuss-products-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
-  // Sync initial URL parameters
+  // Sync initial URL search parameters
   useEffect(() => {
     const q = searchParams.get('q') || '';
     setSearchQuery(q);
 
     const catParam = searchParams.get('category') || '';
     if (catParam) {
-      setSelectedCategories([catParam]);
+      setSelectedCategorySlug(catParam);
     } else {
-      setSelectedCategories([]);
+      setSelectedCategorySlug('');
+    }
+
+    const rangeParam = searchParams.get('range') || '';
+    if (rangeParam && ALL_RANGES.includes(rangeParam as any)) {
+      setSelectedRanges([rangeParam]);
+    }
+
+    const appParam = searchParams.get('application') || searchParams.get('app') || '';
+    if (appParam) {
+      setSelectedApplications([appParam]);
     }
   }, [searchParams]);
 
-  // Handle Category Quick Nav Pills
-  const handleQuickCategory = (slug: string | null) => {
-    if (!slug) {
-      setSelectedCategories([]);
-    } else {
-      setSelectedCategories(prev => (prev.length === 1 && prev[0] === slug ? [] : [slug]));
-    }
-  };
-
-  // Handle Category Checkbox Toggles
-  const handleCategoryToggle = (slug: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(slug) ? prev.filter(c => c !== slug) : [...prev, slug]
+  // Customer-visible products (excludes draft, unpublished, inactive)
+  const visibleProducts = useMemo(() => {
+    return products.filter(p => 
+      p.status !== 'draft' && 
+      (p as any).is_active !== false && 
+      (p as any).is_published !== false
     );
-  };
+  }, [products]);
 
-  // Preset Price Filter
-  const applyPricePreset = (min: number, max: number) => {
-    setMinPrice(min);
-    setMaxPrice(max);
-  };
+  // Distinct country list extracted dynamically from actual visible product dataset
+  const availableCountries = useMemo(() => {
+    const set = new Set<string>();
+    visibleProducts.forEach(p => {
+      if (p.country) set.add(p.country);
+    });
+    return Array.from(set).sort((a, b) => {
+      // Prioritize India, France, Indonesia, Madagascar
+      if (a === 'India') return -1;
+      if (b === 'India') return 1;
+      return a.localeCompare(b);
+    });
+  }, [visibleProducts]);
 
-  // Reset all filters
-  const resetFilters = () => {
-    setSelectedCategories([]);
-    setMinPrice(0);
-    setMaxPrice(maxBoundary);
-    setInStockOnly(false);
-    setSortBy('newest');
-    setSearchQuery('');
+  // Filtered countries matching the country search bar
+  const displayedCountries = useMemo(() => {
+    if (!countrySearch.trim()) return availableCountries;
+    const q = countrySearch.toLowerCase().trim();
+    return availableCountries.filter(c => c.toLowerCase().includes(q));
+  }, [availableCountries, countrySearch]);
+
+  // Accurate dynamic counts for sidebar filters
+  const filterCounts = useMemo(() => {
+    const categoryCounts: Record<number, number> = {};
+    categories.forEach(c => {
+      categoryCounts[c.id] = visibleProducts.filter(p => Number(p.category_id) === Number(c.id)).length;
+    });
+
+    const rangeCounts: Record<string, number> = {};
+    ALL_RANGES.forEach(r => {
+      rangeCounts[r] = visibleProducts.filter(p => p.product_range === r).length;
+    });
+
+    const appCounts: Record<string, number> = {};
+    ALL_APPLICATIONS.forEach(a => {
+      appCounts[a] = visibleProducts.filter(p => p.applications && p.applications.includes(a)).length;
+    });
+
+    const familyCounts: Record<string, number> = {};
+    ALL_FAMILIES.forEach(f => {
+      familyCounts[f] = visibleProducts.filter(p => p.olfactory_family === f).length;
+    });
+
+    const countryCounts: Record<string, number> = {};
+    availableCountries.forEach(c => {
+      countryCounts[c] = visibleProducts.filter(p => p.country === c).length;
+    });
+
+    const organicCount = visibleProducts.filter(p => Boolean(p.is_organic)).length;
+
+    return {
+      categoryCounts,
+      rangeCounts,
+      appCounts,
+      familyCounts,
+      countryCounts,
+      organicCount
+    };
+  }, [visibleProducts, categories, availableCountries]);
+
+  // Checkbox toggle handlers
+  const toggleCategory = (slug: string) => {
+    setSelectedCategorySlug(prev => {
+      const slugs = prev ? prev.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+      const lowerSlug = slug.toLowerCase();
+      let nextSlugs: string[];
+      if (slugs.includes(lowerSlug)) {
+        nextSlugs = slugs.filter(s => s !== lowerSlug);
+      } else {
+        nextSlugs = [...slugs, lowerSlug];
+      }
+      const newQuery = nextSlugs.join(',');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (newQuery) {
+          url.searchParams.set('category', newQuery);
+        } else {
+          url.searchParams.delete('category');
+        }
+        window.history.replaceState(null, '', url.toString());
+      }
+      return newQuery;
+    });
     setCurrentPage(1);
   };
 
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    categories.forEach(c => {
-      counts[c.slug] = products.filter(p => p.category_id === c.id).length;
-    });
-    return counts;
-  }, [categories, products]);
+  const toggleRange = (range: string) => {
+    setSelectedRanges(prev => 
+      prev.includes(range) ? prev.filter(r => r !== range) : [...prev, range]
+    );
+  };
 
-  // Computed / Filtered Products
+  const toggleApplication = (app: string) => {
+    setSelectedApplications(prev => 
+      prev.includes(app) ? prev.filter(a => a !== app) : [...prev, app]
+    );
+  };
+
+  const toggleFamily = (family: string) => {
+    setSelectedFamilies(prev => 
+      prev.includes(family) ? prev.filter(f => f !== family) : [...prev, family]
+    );
+  };
+
+  const toggleCountry = (country: string) => {
+    setSelectedCountries(prev => 
+      prev.includes(country) ? prev.filter(c => c !== country) : [...prev, country]
+    );
+  };
+
+  // Clear all filters action
+  const clearAllFilters = () => {
+    setSelectedCategorySlug('');
+    setSelectedRanges([]);
+    setSelectedApplications([]);
+    setSelectedFamilies([]);
+    setSelectedCountries([]);
+    setIsOrganicOnly(false);
+    setCountrySearch('');
+    setSearchQuery('');
+    setCurrentPage(1);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('category');
+      url.searchParams.delete('range');
+      url.searchParams.delete('application');
+      url.searchParams.delete('app');
+      url.searchParams.delete('q');
+      window.history.replaceState(null, '', url.toString());
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // COMBINE FILTERS (OR within same group, AND across groups)
+  // ─────────────────────────────────────────────────────────────
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...visibleProducts];
 
-    // Search Query
+    // Global search input
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(q) ||
+        (p.botanical_name || '').toLowerCase().includes(q) ||
+        (p.cas_number || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q)
       );
     }
 
-    // Categories
-    if (selectedCategories.length > 0) {
+    // Category Slug (from homepage category navigation or sidebar - matches dynamic categories)
+    if (selectedCategorySlug) {
+      const slugs = selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const matchedCats = categories.filter(c => slugs.includes(c.slug.toLowerCase()));
+      if (matchedCats.length > 0) {
+        const catIds = matchedCats.map(c => Number(c.id));
+        result = result.filter(p => catIds.includes(Number(p.category_id)));
+      }
+    }
+
+    // 1. Product Range (OR)
+    if (selectedRanges.length > 0) {
+      result = result.filter(p => p.product_range && selectedRanges.includes(p.product_range));
+    }
+
+    // 2. Applications (OR)
+    if (selectedApplications.length > 0) {
       result = result.filter(p => {
-        const cat = categories.find(c => c.id === p.category_id);
-        return cat && selectedCategories.includes(cat.slug);
+        // If Food & Flavour application is selected, match spice oils, oleoresins, powders
+        if (selectedApplications.some(a => a.toLowerCase().includes('food') || a.toLowerCase().includes('flavour'))) {
+          if ([2, 3, 6].includes(p.category_id)) return true;
+        }
+        return p.applications && p.applications.some(a => selectedApplications.includes(a));
       });
     }
 
-    // Price Bounds
-    result = result.filter(p => p.price >= minPrice && p.price <= maxPrice);
+    // 3. Olfactory Family (OR)
+    if (selectedFamilies.length > 0) {
+      result = result.filter(p => p.olfactory_family && selectedFamilies.includes(p.olfactory_family));
+    }
 
-    // In Stock Only
-    if (inStockOnly) {
-      result = result.filter(p => p.stock_quantity > 0);
+    // 4. Countries / Origin (OR)
+    if (selectedCountries.length > 0) {
+      result = result.filter(p => p.country && selectedCountries.includes(p.country));
+    }
+
+    // 5. Labels (Organic certified)
+    if (isOrganicOnly) {
+      result = result.filter(p => Boolean(p.is_organic));
     }
 
     // Sorting
@@ -177,1127 +354,886 @@ function ProductListingContent() {
       result.sort((a, b) => b.price - a.price);
     } else if (sortBy === 'name-asc') {
       result.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'popular') {
-      result.sort((a, b) => ((b.rating || 0) * (b.reviews_count || 1)) - ((a.rating || 0) * (a.reviews_count || 1)));
     }
 
     return result;
-  }, [products, categories, selectedCategories, minPrice, maxPrice, inStockOnly, sortBy, searchQuery]);
+  }, [visibleProducts, searchQuery, selectedCategorySlug, selectedRanges, selectedApplications, selectedFamilies, selectedCountries, isOrganicOnly, sortBy]);
 
-  // Reset pagination whenever filters, search, or sorting change
+  // Reset pagination whenever filters or search query change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategories, minPrice, maxPrice, inStockOnly, sortBy, searchQuery]);
+  }, [selectedCategorySlug, selectedRanges, selectedApplications, selectedFamilies, selectedCountries, isOrganicOnly, searchQuery, sortBy]);
 
-  // Total pages and paginated slice
+  // Pagination slice
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const paginatedProducts = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage, itemsPerPage]);
 
-  // Check if any filter is active
   const hasActiveFilters = 
-    selectedCategories.length > 0 || 
-    inStockOnly || 
-    minPrice > 0 || 
-    maxPrice < maxBoundary || 
+    Boolean(selectedCategorySlug) ||
+    selectedRanges.length > 0 ||
+    selectedApplications.length > 0 ||
+    selectedFamilies.length > 0 ||
+    selectedCountries.length > 0 ||
+    isOrganicOnly ||
     Boolean(searchQuery.trim());
 
-  // Sidebar-specific active filter counts
-  const isPriceFiltered = minPrice > 0 || maxPrice < maxBoundary;
-  const activeSidebarFilterCount = 
-    selectedCategories.length + 
-    (inStockOnly ? 1 : 0) + 
-    (isPriceFiltered ? 1 : 0);
-
-  // Active Category Name for single selection breadcrumb
-  const activeSingleCategory = useMemo(() => {
-    if (selectedCategories.length === 1) {
-      return categories.find(c => c.slug === selectedCategories[0]);
+  // Dynamic header title and breadcrumb
+  const headerTitle = useMemo(() => {
+    if (selectedCategorySlug) {
+      const slugs = selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const matchedCats = categories.filter(c => slugs.includes(c.slug.toLowerCase()));
+      if (matchedCats.length === 1) return matchedCats[0].name;
+      if (matchedCats.length > 1) {
+        if (slugs.includes('spice-oils') && slugs.includes('spice-oleoresins')) return 'Spice Oils & Oleoresins';
+        if (slugs.includes('floral-concretes') && slugs.includes('floral-absolutes')) return 'Floral Concretes & Absolutes';
+        return matchedCats.map(c => c.name).join(' & ');
+      }
     }
-    return null;
-  }, [selectedCategories, categories]);
+    if (selectedApplications.length === 1) {
+      if (selectedApplications[0].toLowerCase().includes('food') || selectedApplications[0].toLowerCase().includes('flavour')) {
+        return 'Food & Flavour Botanicals';
+      }
+      return `${selectedApplications[0]} Botanicals`;
+    }
+    if (selectedRanges.length === 1) return selectedRanges[0];
+    if (selectedRanges.length > 1) return selectedRanges.join(' & ');
+    if (selectedFamilies.length === 1) return `${selectedFamilies[0]} Botanicals`;
+    if (selectedCountries.length === 1) return `Botanicals of ${selectedCountries[0]}`;
+    return 'Product Catalogue';
+  }, [selectedCategorySlug, categories, selectedRanges, selectedFamilies, selectedCountries, selectedApplications]);
+
+  // Dynamic header subtitle
+  const headerSubtitle = useMemo(() => {
+    if (selectedCategorySlug) {
+      const slugs = selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const matchedCats = categories.filter(c => slugs.includes(c.slug.toLowerCase()));
+      if (slugs.includes('spice-oils') && slugs.includes('spice-oleoresins')) {
+        return 'Steam-distilled spice oils and concentrated flavor oleoresins capturing full aromatic bouquets and active pungency principles.';
+      }
+      if (slugs.includes('floral-concretes') && slugs.includes('floral-absolutes')) {
+        return 'Natural flower wax concretes and precious solvent-extracted floral absolutes isolated from fresh dawn blossoms for fine perfumery.';
+      }
+      if (selectedCategorySlug === 'floral-absolutes') return 'Precious, solvent-extracted floral absolutes isolated from fresh dawn-harvested blossoms for fine perfumery.';
+      if (selectedCategorySlug === 'floral-concretes') return 'Natural flower wax concretes containing volatile absolutes and protective botanical lipids.';
+      if (selectedCategorySlug === 'spice-oleoresins') return 'Concentrated flavor resins containing total volatile oils and active pungency principles.';
+      if (selectedCategorySlug === 'spice-powders') return 'Sortex-cleaned, cryogenic micro-milled, and continuous-steam sterilized spice powders.';
+      if (selectedCategorySlug === 'spice-oils') return 'Steam-distilled aromatic spice oils from high-curcumin and cineolic Indian cultivars.';
+      if (selectedCategorySlug === 'essential-oils') return 'Pure essential oils crafted from the finest botanicals, extracted with care to preserve their natural aroma and therapeutic bioactives.';
+      if (matchedCats.length === 1 && matchedCats[0].description) {
+        return matchedCats[0].description;
+      }
+    }
+    if (selectedApplications.includes('Fragrance')) {
+      return 'Exquisite floral absolutes, concretes, and pure aromatics crafted for fine fragrance and luxury perfumery formulations.';
+    }
+    if (selectedApplications.includes('Aromatherapy')) {
+      return 'Pure, therapeutic-grade steam-distilled essential oils and botanical elixirs to support holistic wellness and aromatherapy.';
+    }
+    if (selectedApplications.some(a => a.toLowerCase().includes('food') || a.toLowerCase().includes('flavour'))) {
+      return 'Authentic, sortex-cleaned spice extracts, oleoresins, and sterilized powders manufactured for food, beverage, and confectionery formulations.';
+    }
+    return 'Pure essential oils, spice oleoresins, floral absolutes, and sterilized powders manufactured with analytical precision.';
+  }, [selectedCategorySlug, categories, selectedApplications]);
 
   return (
-    <div className="relative min-h-screen bg-[#FAF9F5] text-[#2D3748] flex flex-col">
+    <div className="relative min-h-screen bg-[#F7F4EA] text-[#2D3748] flex flex-col font-sans">
       <Navbar />
 
-      {/* Realistic Botanical Margin Framing (Outer 0–8vw edge anchored, center 100% clean) */}
+      {/* Decorative Botanical Margin Framing */}
       <CatalogBotanicalFrame />
 
-      {/* 1. FULL-WIDTH BOTANICAL HERO ENVIRONMENT (450–520px desktop, Seamless Edge-to-Edge) */}
-      <section className="relative w-full h-[450px] sm:h-[480px] lg:h-[500px] bg-[#FAF8F0] overflow-hidden flex items-center border-b border-[#254936]/10 select-none">
-        {/* Full-width panoramic jasmine environment background */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <img 
-            src="/images/botanical/shop-hero-jasmine-env.jpg" 
-            alt="Lush Star Jasmine Botanical Scene" 
-            className="w-full h-full object-cover object-right md:object-[center_right]"
-          />
-          {/* Subtle natural organic feathering into cream on the left and bottom */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#FAF8F0] via-[#FAF8F0]/80 to-transparent w-full md:w-[62%]" />
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#FAF8F0] to-transparent" />
-        </div>
+      {/* =========================================================
+          1. CATALOGUE HEADER BANNER (Matching Reference Layout)
+         ========================================================= */}
+      <section className="relative w-full bg-[#F7F4EA] border-b border-[#173B2B]/10 pt-6 pb-6 lg:pb-8 overflow-hidden">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] lg:grid-cols-[1fr_400px] items-center gap-6">
+            
+            {/* Left Column: Breadcrumb + Title + Subtitle */}
+            <div className="space-y-3 max-w-2xl">
+              {/* Breadcrumb Navigation */}
+              <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-[13.5px] font-medium text-[#48634F]">
+                <Link href="/" className="hover:text-[#173B2B] transition-colors">Home</Link>
+                <ChevronRight className="w-3.5 h-3.5 text-[#728B79]" />
+                <span className="text-[#173B2B] font-bold">{headerTitle}</span>
+              </nav>
 
-        {/* Hero Editorial Content Container (Centered to max-w-[1440px] page grid) */}
-        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-xl lg:max-w-2xl space-y-4">
-            {/* Eyebrow Label with Botanical Amber Dot */}
-            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.28em] text-[#B98255]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#B98255]" />
-              <span>SHOP OUR RANGE</span>
+              {/* Main Heading */}
+              <h1 className="font-heading text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#173B2B] tracking-tight leading-[1.15]">
+                {headerTitle}
+              </h1>
+
+              {/* Editorial Subtitle */}
+              <p className="text-base sm:text-[17.5px] text-[#344C3D] font-normal leading-relaxed">
+                {headerSubtitle}
+              </p>
             </div>
 
-            {/* Main Editorial Headline */}
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-[46px] font-bold text-[#102C20] tracking-tight leading-[1.08]">
-              Explore the Collection
-            </h1>
-
-            {/* Editorial Subtitle */}
-            <p className="text-xs sm:text-[14.5px] text-[#5A6E60] font-light leading-relaxed max-w-lg">
-              Discover 100% steam-distilled essential oils, cold-pressed spice extracts, floral concretes, absolutes, and pure botanical ingredients.
-            </p>
-
-            {/* 3 Botanical Trust Badges with Soft Cream Translucent Pills */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1.5 text-xs">
-              <span className="inline-flex items-center gap-1.5 font-medium text-[#102C20] bg-white/85 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-[#254936]/15 shadow-2xs">
-                <Leaf className="w-3.5 h-3.5 text-[#254936]" />
-                168 Botanical Formulations
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-[#102C20] bg-white/85 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-[#254936]/15 shadow-2xs">
-                <FlaskConical className="w-3.5 h-3.5 text-[#B98255]" />
-                6 Specialized Collections
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-[#102C20] bg-white/85 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-[#254936]/15 shadow-2xs">
-                <Globe className="w-3.5 h-3.5 text-[#254936]" />
-                Export Grade Quality
-              </span>
+            {/* Right Column: Seamless Botanical Branch with Golden Oil Drop */}
+            <div className="hidden md:flex justify-end items-center h-28 lg:h-32 pointer-events-none select-none">
+              <img 
+                src="/images/botanical/catalogue-header-branch.png" 
+                alt="Botanical branch with hanging pure extract droplet"
+                className="h-full object-contain object-right"
+              />
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* 2. MAIN COMMERCE AREA (Centered Container, Compact Spacing) */}
-      <main className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16 flex-grow w-full">
-        {/* Hidden accessible breadcrumb for SEO / screen readers */}
-        <nav aria-label="Breadcrumb" className="sr-only">
-          <Link href="/">Home</Link>
-          <span>/</span>
-          <button onClick={() => handleQuickCategory(null)}>Shop Catalog</button>
-          {activeSingleCategory && <span>/ {activeSingleCategory.name}</span>}
-        </nav>
-
-        {/* Horizontal Category Navigation Pills (Reference Image Single Row) */}
-        <div className="mb-4 flex items-center justify-start lg:justify-center overflow-x-auto pb-1 scrollbar-none">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <button
-              onClick={() => handleQuickCategory(null)}
-              className={`group px-4.5 py-2.5 rounded-full text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-                selectedCategories.length === 0
-                  ? 'bg-[#102C20] text-[#FAF8F2] shadow-sm border border-[#102C20] -translate-y-0.5'
-                  : 'bg-[#FAF8F0] hover:bg-[#EAEFE8] text-[#102C20] border border-[#254936]/18 hover:border-[#254936]/35 hover:-translate-y-0.5 shadow-2xs'
-              }`}
-            >
-              <Leaf className={`w-3 h-3 ${selectedCategories.length === 0 ? 'text-[#85B09A]' : 'text-[#5F7C5D]'}`} />
-              <span>All Collections</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-colors ${
-                selectedCategories.length === 0 
-                  ? 'bg-[#254936] text-[#FAF8F2]' 
-                  : 'bg-[#254936]/10 text-[#254936] group-hover:bg-[#254936]/15'
-              }`}>
-                {products.length}
-              </span>
-            </button>
-            {categories.map((cat) => {
-              const isSelected = selectedCategories.includes(cat.slug);
-              const count = categoryCounts[cat.slug] || 0;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleQuickCategory(cat.slug)}
-                  className={`group px-4.5 py-2.5 rounded-full text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#102C20] text-[#FAF8F2] shadow-sm border border-[#102C20] -translate-y-0.5'
-                      : 'bg-[#FAF8F0] hover:bg-[#EAEFE8] text-[#102C20] border border-[#254936]/18 hover:border-[#254936]/35 hover:-translate-y-0.5 shadow-2xs'
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-colors ${
-                    isSelected 
-                      ? 'bg-[#254936] text-[#FAF8F2]' 
-                      : 'bg-[#254936]/10 text-[#254936] group-hover:bg-[#254936]/15'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Content Body Layout: Sticky Sidebar (Left) + Products Area (Right) */}
-        <div className="flex flex-col lg:flex-row items-start gap-5 lg:gap-6">
+      {/* =========================================================
+          2. MAIN CATALOGUE & FILTER AREA
+         ========================================================= */}
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        {/* =========================================================
+            TWO-COLUMN DESKTOP LAYOUT (Left Sidebar + Right Product Grid)
+           ========================================================= */}
+        <div className="flex flex-col lg:flex-row items-start gap-8">
           
-          {/* 1. COMPACT STICKY BOTANICAL SIDEBAR (Simultaneous Full Visibility, No Internal Scroll) */}
-          <aside className="hidden lg:block w-[255px] xl:w-[265px] shrink-0 bg-[#FAF8F0] border border-[#254936]/12 p-3 rounded-2xl shadow-[0_4px_16px_rgba(16,44,32,0.03)] sticky top-[84px] z-20 space-y-2">
-            {/* Filter Header */}
-            <div className="flex items-start justify-between pb-2 border-b border-[rgba(37,73,54,0.08)]">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#102C20]" />
-                  <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#102C20]">
-                    Filter Collection
-                  </h2>
-                </div>
-                <p className="text-[9.5px] text-[#5F7C5D] font-normal leading-tight mt-0.5">
-                  {activeSidebarFilterCount > 0 ? `${activeSidebarFilterCount} ${activeSidebarFilterCount === 1 ? 'filter' : 'filters'} active` : 'Refine your botanical selection'}
-                </p>
+          {/* =======================================================
+              3. LEFT FILTER SIDEBAR (Desktop)
+             ======================================================= */}
+          <aside className="hidden lg:block w-64 xl:w-72 shrink-0 bg-white/90 backdrop-blur-md p-5 rounded-2xl border border-[#173B2B]/12 shadow-xs space-y-6">
+            
+            {/* Sidebar Title & Clear All Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#173B2B]/10">
+              <div className="flex items-center gap-2 text-[15.5px] sm:text-[16px] font-extrabold tracking-wider uppercase text-[#173B2B]">
+                <SlidersHorizontal className="w-4 h-4 text-[#173B2B]" />
+                <span>Filters</span>
               </div>
-
-              {/* Clear Header Action */}
               {hasActiveFilters && (
-                <button 
+                <button
                   type="button"
-                  onClick={resetFilters}
-                  className="text-[10px] font-semibold text-[#102C20] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Clear all filters"
+                  onClick={clearAllFilters}
+                  className="text-[13.5px] font-bold text-[#1E5034] hover:underline transition-colors cursor-pointer"
                 >
                   Clear all
                 </button>
               )}
             </div>
 
-            {/* Active Filter Summary Chips (Dynamically Collapses when None Selected) */}
-            {activeSidebarFilterCount > 0 && (
-              <div className="pb-2 border-b border-[rgba(37,73,54,0.08)]">
-                <div className="text-[9px] font-bold uppercase tracking-wider text-[#5F7C5D] mb-1 flex items-center justify-between">
-                  <span>{activeSidebarFilterCount} {activeSidebarFilterCount === 1 ? 'Filter' : 'Filters'} Active</span>
-                  <button 
-                    type="button" 
-                    onClick={resetFilters}
-                    className="text-[9px] font-medium text-[#B98255] hover:underline cursor-pointer"
-                  >
-                    Reset all
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {/* Category Chips */}
-                  {selectedCategories.map((slug) => {
-                    const cat = categories.find(c => c.slug === slug);
-                    return (
-                      <button
-                        key={slug}
-                        type="button"
-                        onClick={() => handleCategoryToggle(slug)}
-                        className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                        title={`Remove ${cat?.name || slug} filter`}
-                      >
-                        <span className="truncate max-w-[100px]">{cat?.name || slug}</span>
-                        <X className="w-2.5 h-2.5 text-[#5F7C5D] group-hover:text-[#254936]" />
-                      </button>
-                    );
-                  })}
-
-                  {/* Price Chip */}
-                  {isPriceFiltered && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMinPrice(0);
-                        setMaxPrice(maxBoundary);
-                      }}
-                      className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                      title="Reset price range"
-                    >
-                      <span>₹{minPrice.toLocaleString('en-IN')} – ₹{maxPrice.toLocaleString('en-IN')}</span>
-                      <X className="w-2.5 h-2.5 text-[#5F7C5D] group-hover:text-[#254936]" />
-                    </button>
-                  )}
-
-                  {/* Stock Chip */}
-                  {inStockOnly && (
-                    <button
-                      type="button"
-                      onClick={() => setInStockOnly(false)}
-                      className="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                      title="Remove in-stock filter"
-                    >
-                      <span>In Stock</span>
-                      <X className="w-2.5 h-2.5 text-[#5F7C5D] group-hover:text-[#254936]" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Section 1: Collections (Compact Rows, Simultaneous Baseline Alignment) */}
-            <div className="pb-2 border-b border-[rgba(37,73,54,0.08)]">
+            {/* GROUP 0: PRODUCT CATEGORIES */}
+            <div className="border-b border-[#173B2B]/10 pb-4">
               <button
                 type="button"
-                onClick={() => setIsCollectionsOpen(!isCollectionsOpen)}
-                className="w-full flex items-center justify-between text-[11px] font-bold text-[#102C20] uppercase tracking-wider py-0.5 select-none hover:text-[#254936] transition-colors cursor-pointer"
-                aria-expanded={isCollectionsOpen}
+                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
               >
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#5F7C5D] text-xs">▱</span>
-                  <span>Collections</span>
-                </span>
-                <div className="flex items-center gap-1">
-                  {selectedCategories.length > 0 && (
-                    <span className="text-[9px] font-bold text-[#102C20] bg-[#E8EEE5] px-1.5 py-0.2 rounded-full">
-                      {selectedCategories.length}
-                    </span>
-                  )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isCollectionsOpen ? 'rotate-180' : ''}`} />
-                </div>
+                <span>Category</span>
+                {isCategoryOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
               </button>
 
-              {isCollectionsOpen && (
-                <div className="mt-1 space-y-0.5">
-                  {categories.map((cat) => {
-                    const isChecked = selectedCategories.includes(cat.slug);
-                    const count = categoryCounts[cat.slug] || 0;
+              {isCategoryOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in max-h-56 overflow-y-auto pr-1">
+                  {categories.filter(c => c.is_active !== false).map(cat => {
+                    const count = filterCounts.categoryCounts[cat.id] || 0;
+                    const activeSlugs = selectedCategorySlug ? selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()) : [];
+                    const checked = activeSlugs.includes(cat.slug.toLowerCase());
                     return (
-                      <div
-                        key={cat.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleCategoryToggle(cat.slug)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleCategoryToggle(cat.slug);
-                          }
-                        }}
-                        className={`w-full flex items-center justify-between py-0.5 px-1.5 rounded-md transition-all duration-150 cursor-pointer group text-left ${
-                          isChecked
-                            ? 'bg-[#EAEFE8] text-[#102C20]'
-                            : 'hover:bg-[#F2F5EF] text-[#2D3748]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          {/* Custom Checkbox */}
-                          <div
-                            className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 transition-all ${
-                              isChecked
-                                ? 'bg-[#102C20] border-[#102C20]'
-                                : 'bg-white border-[#254936]/30 group-hover:border-[#102C20]'
-                            }`}
-                          >
-                            {isChecked && (
-                              <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                            )}
-                          </div>
-                          <span className={`text-[11px] truncate transition-colors ${
-                            isChecked ? 'font-semibold text-[#102C20]' : 'font-normal text-[#2D3748] group-hover:text-[#102C20]'
-                          }`}>
-                            {cat.name}
-                          </span>
+                      <label key={cat.id} className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCategory(cat.slug)}
+                            className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                          />
+                          <span className={checked ? 'font-bold text-[#173B2B]' : 'font-medium'}>{cat.name}</span>
                         </div>
-
-                        {/* Category Count Mini Capsule */}
-                        <span className={`text-[9px] px-1 py-0.2 rounded-full font-medium transition-colors shrink-0 ml-1 ${
-                          isChecked
-                            ? 'bg-[#102C20]/12 text-[#102C20] font-bold'
-                            : 'bg-[#254936]/8 text-[#5F7C5D]'
-                        }`}>
-                          {count}
-                        </span>
-                      </div>
+                        <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                      </label>
                     );
                   })}
                 </div>
               )}
             </div>
 
-            {/* Section 2: Price (Vertical Radio Presets + Botanical Slider + Compact Dual Inputs) */}
-            <div className="pb-2 border-b border-[rgba(37,73,54,0.08)]">
+            {/* GROUP 1: PRODUCT RANGE */}
+            <div className="border-b border-[#173B2B]/10 pb-4">
               <button
                 type="button"
-                onClick={() => setIsPriceOpen(!isPriceOpen)}
-                className="w-full flex items-center justify-between text-[11px] font-bold text-[#102C20] uppercase tracking-wider py-0.5 select-none hover:text-[#254936] transition-colors cursor-pointer"
-                aria-expanded={isPriceOpen}
+                onClick={() => setIsRangeOpen(!isRangeOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
               >
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#5F7C5D] text-xs">◇</span>
-                  <span>Price</span>
-                </span>
-                <div className="flex items-center gap-1">
-                  {isPriceFiltered && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#102C20]" />
-                  )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isPriceOpen ? 'rotate-180' : ''}`} />
-                </div>
+                <span>Product Range</span>
+                {isRangeOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
               </button>
 
-              {isPriceOpen && (
-                <div className="mt-1 space-y-1.5">
-                  {/* Vertical Radio Presets (Exact Reference Match) */}
-                  <div className="space-y-0.5">
-                    {[
-                      { label: 'Under ₹500', min: 0, max: 500, active: minPrice === 0 && maxPrice === 500 },
-                      { label: '₹500 – ₹1k', min: 500, max: 1000, active: minPrice === 500 && maxPrice === 1000 },
-                      { label: '₹1k – ₹2k', min: 1000, max: 2000, active: minPrice === 1000 && maxPrice === 2000 },
-                      { label: '₹2k+', min: 2000, max: maxBoundary, active: minPrice === 2000 && maxPrice >= maxBoundary },
-                    ].map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => {
-                          if (preset.active) {
-                            setMinPrice(0);
-                            setMaxPrice(maxBoundary);
-                          } else {
-                            applyPricePreset(preset.min, preset.max);
-                          }
-                        }}
-                        className={`w-full flex items-center justify-between py-0.5 px-1.5 rounded-md text-[11px] transition-colors cursor-pointer text-left ${
-                          preset.active
-                            ? 'bg-[#EAEFE8] text-[#102C20] font-semibold'
-                            : 'hover:bg-[#F2F5EF] text-[#2D3748] font-normal'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-3 h-3 rounded-full border flex items-center justify-center transition-all ${
-                            preset.active ? 'border-[#102C20] bg-white' : 'border-[#254936]/30 bg-white'
-                          }`}>
-                            {preset.active && <span className="w-1.5 h-1.5 rounded-full bg-[#102C20]" />}
-                          </span>
-                          <span>{preset.label}</span>
+              {isRangeOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in">
+                  {ALL_RANGES.map(range => {
+                    const count = filterCounts.rangeCounts[range] || 0;
+                    const checked = selectedRanges.includes(range);
+                    return (
+                      <label key={range} className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleRange(range)}
+                            className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                          />
+                          <span className={checked ? 'font-bold text-[#173B2B]' : 'font-medium'}>{range}</span>
                         </div>
-                      </button>
-                    ))}
-                  </div>
+                        <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                  {/* Botanical Price Slider */}
-                  <div className="pt-0.5">
-                    <div className="flex justify-between items-center text-[9px] font-medium text-[#5F7C5D] mb-0.5 select-none">
-                      <span>₹0</span>
-                      <span className="font-semibold text-[#102C20]">Up to ₹{maxPrice.toLocaleString('en-IN')}</span>
-                      <span>₹{maxBoundary.toLocaleString('en-IN')}</span>
-                    </div>
+            {/* GROUP 2: APPLICATIONS */}
+            <div className="border-b border-[#173B2B]/10 pb-4">
+              <button
+                type="button"
+                onClick={() => setIsAppOpen(!isAppOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
+              >
+                <span>Applications</span>
+                {isAppOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
+              </button>
+
+              {isAppOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in">
+                  {ALL_APPLICATIONS.map(app => {
+                    const count = filterCounts.appCounts[app] || 0;
+                    const checked = selectedApplications.includes(app);
+                    return (
+                      <label key={app} className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleApplication(app)}
+                            className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                          />
+                          <span className={checked ? 'font-bold text-[#173B2B]' : 'font-medium'}>{app}</span>
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* GROUP 3: OLFACTORY FAMILY */}
+            <div className="border-b border-[#173B2B]/10 pb-4">
+              <button
+                type="button"
+                onClick={() => setIsFamilyOpen(!isFamilyOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
+              >
+                <span>Olfactory Family</span>
+                {isFamilyOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
+              </button>
+
+              {isFamilyOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in">
+                  {ALL_FAMILIES.map(family => {
+                    const count = filterCounts.familyCounts[family] || 0;
+                    const checked = selectedFamilies.includes(family);
+                    return (
+                      <label key={family} className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleFamily(family)}
+                            className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                          />
+                          <span className={checked ? 'font-bold text-[#173B2B]' : 'font-medium'}>{family}</span>
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* GROUP 4: COUNTRIES / ORIGIN (With Searchable Filter Input) */}
+            <div className="border-b border-[#173B2B]/10 pb-4">
+              <button
+                type="button"
+                onClick={() => setIsOriginOpen(!isOriginOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
+              >
+                <span>Countries / Origin</span>
+                {isOriginOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
+              </button>
+
+              {isOriginOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in">
+                  {/* Search Country Input Field */}
+                  <div className="relative mb-2.5">
                     <input
-                      type="range"
-                      min={0}
-                      max={maxBoundary}
-                      step={50}
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(Number(e.target.value))}
-                      className="botanical-range-slider w-full cursor-pointer h-1"
-                      style={{
-                        background: `linear-gradient(to right, #102C20 0%, #102C20 ${(maxPrice / (maxBoundary || 1)) * 100}%, #E0E7DE ${(maxPrice / (maxBoundary || 1)) * 100}%, #E0E7DE 100%)`
-                      }}
-                      aria-label="Filter maximum price"
+                      type="text"
+                      placeholder="Search country..."
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 bg-[#F7F4EA]/90 border border-[#173B2B]/20 rounded-lg text-[13.5px] sm:text-[14px] text-[#173B2B] placeholder:text-[#5A6E60]/80 focus:outline-none focus:border-[#173B2B]"
                     />
-                  </div>
-
-                  {/* Compact Dual Number Inputs */}
-                  <div className="grid grid-cols-2 gap-1 pt-0.5">
-                    <div>
-                      <span className="text-[8.5px] font-medium text-[#5F7C5D] uppercase tracking-wider block mb-0.5">
-                        Min (₹)
-                      </span>
-                      <div className="flex items-center bg-white border border-[#254936]/20 rounded-md px-1.5 py-0.5 focus-within:border-[#102C20] transition-all">
-                        <span className="text-[10px] text-[#5F7C5D] font-medium mr-1 select-none">₹</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={maxPrice}
-                          value={minPrice === 0 ? '' : minPrice}
-                          onChange={(e) => {
-                            const val = Number(e.target.value) || 0;
-                            setMinPrice(Math.max(0, val));
-                          }}
-                          placeholder="0"
-                          className="w-full bg-transparent text-[10.5px] text-[#102C20] font-medium focus:outline-none placeholder:text-[#5F7C5D]/40"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-[8.5px] font-medium text-[#5F7C5D] uppercase tracking-wider block mb-0.5">
-                        Max (₹)
-                      </span>
-                      <div className="flex items-center bg-white border border-[#254936]/20 rounded-md px-1.5 py-0.5 focus-within:border-[#102C20] transition-all">
-                        <span className="text-[10px] text-[#5F7C5D] font-medium mr-1 select-none">₹</span>
-                        <input
-                          type="number"
-                          min={minPrice}
-                          max={maxBoundary * 2}
-                          value={maxPrice === maxBoundary ? '' : maxPrice}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setMaxPrice(val > 0 ? val : maxBoundary);
-                          }}
-                          placeholder={String(maxBoundary)}
-                          className="w-full bg-transparent text-[10.5px] text-[#102C20] font-medium focus:outline-none placeholder:text-[#5F7C5D]/40"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Section 3: Availability (Always Simultaneously Visible) */}
-            <div className="pb-1">
-              <button
-                type="button"
-                onClick={() => setIsAvailabilityOpen(!isAvailabilityOpen)}
-                className="w-full flex items-center justify-between text-[11px] font-bold text-[#102C20] uppercase tracking-wider py-0.5 select-none hover:text-[#254936] transition-colors cursor-pointer"
-                aria-expanded={isAvailabilityOpen}
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#5F7C5D] text-xs">✓</span>
-                  <span>Availability</span>
-                </span>
-                <div className="flex items-center gap-1">
-                  {inStockOnly && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#102C20]" />
-                  )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isAvailabilityOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
-
-              {isAvailabilityOpen && (
-                <div className="mt-1">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setInStockOnly(!inStockOnly)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setInStockOnly(!inStockOnly);
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between py-0.5 px-1.5 rounded-md transition-all duration-150 cursor-pointer group text-left ${
-                      inStockOnly
-                        ? 'bg-[#EAEFE8] text-[#102C20]'
-                        : 'hover:bg-[#F2F5EF] text-[#2D3748]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div
-                        className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 transition-all ${
-                          inStockOnly
-                            ? 'bg-[#102C20] border-[#102C20]'
-                            : 'bg-white border-[#254936]/30 group-hover:border-[#102C20]'
-                        }`}
+                    <Search className="w-3.5 h-3.5 text-[#5A6E60] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    {countrySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCountrySearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
-                        {inStockOnly && (
-                          <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                        )}
-                      </div>
-                      <span className={`text-[11px] transition-colors ${
-                        inStockOnly ? 'font-semibold text-[#102C20]' : 'font-normal text-[#2D3748] group-hover:text-[#102C20]'
-                      }`}>
-                        In Stock Only
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-[#5F7C5D] font-light">
-                      Ready to ship
-                    </span>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Country Checkboxes */}
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                    {displayedCountries.map(country => {
+                      const count = filterCounts.countryCounts[country] || 0;
+                      const checked = selectedCountries.includes(country);
+                      return (
+                        <label key={country} className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCountry(country)}
+                              className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                            />
+                            <span className={checked ? 'font-bold text-[#173B2B]' : 'font-medium'}>{country}</span>
+                          </div>
+                          <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                        </label>
+                      );
+                    })}
+                    {displayedCountries.length === 0 && (
+                      <div className="text-[12.5px] text-[#5A6E60] py-2 text-center">No matching country</div>
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Bottom Clear All Bar */}
-            <div className="pt-1.5 border-t border-[rgba(37,73,54,0.08)] flex justify-center">
+            {/* GROUP 5: LABELS (Organic Certified) */}
+            <div className="pb-2">
               <button
                 type="button"
-                onClick={resetFilters}
-                disabled={!hasActiveFilters}
-                className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider py-0.5 px-2 rounded-md transition-all duration-150 ${
-                  hasActiveFilters
-                    ? 'text-[#B98255] hover:text-[#102C20] hover:bg-[#254936]/5 cursor-pointer'
-                    : 'text-[#5F7C5D]/40 cursor-not-allowed'
-                }`}
+                onClick={() => setIsLabelsOpen(!isLabelsOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-[14.5px] sm:text-[15px] font-bold uppercase tracking-wider text-[#173B2B] cursor-pointer hover:text-[#25523D]"
               >
-                <RotateCcw className="w-2.5 h-2.5" />
-                <span>Clear all</span>
+                <span>Labels</span>
+                {isLabelsOpen ? <ChevronUp className="w-4 h-4 text-[#173B2B]" /> : <ChevronDown className="w-4 h-4 text-[#173B2B]" />}
               </button>
+
+              {isLabelsOpen && (
+                <div className="mt-3 space-y-2.5 animate-fade-in">
+                  <label className="flex items-center justify-between text-[14px] sm:text-[15px] text-[#243B2C] hover:text-[#173B2B] cursor-pointer select-none">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isOrganicOnly}
+                        onChange={(e) => setIsOrganicOnly(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-[#173B2B] focus:ring-[#173B2B] cursor-pointer accent-[#173B2B]"
+                      />
+                      <span className={isOrganicOnly ? 'font-bold text-[#173B2B]' : 'font-medium'}>Organic certified</span>
+                    </div>
+                    <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.organicCount})</span>
+                  </label>
+                </div>
+              )}
             </div>
 
-            {/* Botanical Corner Watermark */}
-            <div className="absolute bottom-0 right-0 pointer-events-none opacity-[0.03] text-[#254936] select-none overflow-hidden w-16 h-16 flex items-end justify-end">
-              <svg width="64" height="64" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M20,80 Q35,45 80,20 Q65,65 20,80 Z" />
-                <path d="M20,80 Q45,55 75,25" />
-                <path d="M38,62 Q45,58 52,60" />
-                <path d="M50,50 Q58,45 66,48" />
-                <path d="M32,70 Q30,62 38,62" />
-              </svg>
-            </div>
           </aside>
 
-          {/* 2. PRODUCT AREA (Right Column: Toolbar + Grid) */}
-          <div className="flex-1 min-w-0">
-            {/* Product Toolbar: Placed directly above the product grid, aligned with the product area */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-1">
-              <p className="text-xs sm:text-[13px] text-[#5A6E60] font-normal">
-                Showing <strong className="text-[#102C20] font-semibold">{filteredProducts.length > 0 ? `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredProducts.length)}` : '0'}</strong> of <strong className="text-[#102C20] font-semibold">{filteredProducts.length}</strong> products
-              </p>
+          {/* =======================================================
+              4. RIGHT PRODUCT GRID & CONTROLS (Desktop & Mobile)
+             ======================================================= */}
+          <div className="flex-1 w-full min-w-0">
+            {/* Top Control Bar: [Product Count & Filter Trigger] ------- [Sort by] [View Mode] */}
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#173B2B]/10 mb-5">
+              
+              {/* Left: Product Count & Mobile Filter Trigger */}
+              <div className="flex items-center gap-3">
+                <span className="font-heading text-xl sm:text-2xl font-extrabold text-[#173B2B]">
+                  {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
+                </span>
 
-              <div className="flex items-center gap-3 self-end sm:self-auto">
-                {/* Mobile Filter Trigger */}
+                {/* Mobile Filter Sheet Button */}
                 <button
+                  type="button"
                   onClick={() => setShowMobileFilters(true)}
-                  className="lg:hidden flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#254936]/20 rounded-xl text-xs font-semibold text-[#102C20] hover:bg-[#FAF8F2] shadow-xs cursor-pointer"
+                  className="lg:hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#173B2B]/25 bg-white text-[14px] font-bold text-[#173B2B] shadow-2xs hover:bg-[#F2F5EF] cursor-pointer"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#102C20]" />
-                  <span>Filters {activeSidebarFilterCount > 0 ? `(${activeSidebarFilterCount})` : ''}</span>
+                  <Filter className="w-4 h-4 text-[#173B2B]" />
+                  <span>Filters</span>
+                  {hasActiveFilters && (
+                    <span className="w-4.5 h-4.5 rounded-full bg-[#173B2B] text-white text-[10px] flex items-center justify-center font-bold">
+                      {selectedRanges.length + selectedApplications.length + selectedFamilies.length + selectedCountries.length + (isOrganicOnly ? 1 : 0)}
+                    </span>
+                  )}
                 </button>
+              </div>
 
-                {/* Sort Dropdown */}
-                <div className="relative flex items-center bg-white border border-[#254936]/15 rounded-full px-3.5 py-1.5 shadow-xs">
-                  <span className="text-xs text-[#5A6E60] mr-1.5 whitespace-nowrap">Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-transparent text-xs font-semibold text-[#102C20] border-none focus:outline-none cursor-pointer pr-1"
-                  >
-                    <option value="newest">Newest</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="price-asc">Price: Low to High</option>
-                    <option value="price-desc">Price: High to Low</option>
-                    <option value="name-asc">Name: A to Z</option>
-                  </select>
+              {/* Right: Sort By Dropdown & Grid/List View Toggles */}
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort-select" className="text-[14px] text-[#344C3D] font-medium whitespace-nowrap">
+                    Sort by:
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="sort-select"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="appearance-none bg-white border border-[#173B2B]/20 rounded-lg text-[14px] font-semibold text-[#173B2B] pl-3.5 pr-8 py-2 focus:outline-none focus:border-[#173B2B] shadow-2xs cursor-pointer"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="name-asc">Name: A to Z</option>
+                      <option value="price-asc">Price: Low to High</option>
+                      <option value="price-desc">Price: High to Low</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#173B2B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
-                {/* Segmented View Switch: Grid / List */}
-                <div className="hidden sm:flex items-center bg-white border border-[#254936]/15 rounded-xl p-0.5 shadow-xs">
+                {/* View Mode Toggle: Grid & List */}
+                <div className="flex items-center bg-[#DCE5D5]/50 p-0.5 rounded-lg border border-[#173B2B]/10">
                   <button
+                    type="button"
                     onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      viewMode === 'grid' ? 'bg-[#102C20] text-white' : 'text-[#5A6E60] hover:text-[#102C20]'
+                    className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                      viewMode === 'grid'
+                        ? 'bg-[#173B2B] text-white shadow-2xs'
+                        : 'text-[#5A6E60] hover:text-[#173B2B]'
                     }`}
                     title="Grid View"
                     aria-label="Grid View"
                   >
-                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <LayoutGrid className="w-4 h-4" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      viewMode === 'list' ? 'bg-[#102C20] text-white' : 'text-[#5A6E60] hover:text-[#102C20]'
+                    className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                      viewMode === 'list'
+                        ? 'bg-[#173B2B] text-white shadow-2xs'
+                        : 'text-[#5A6E60] hover:text-[#173B2B]'
                     }`}
                     title="List View"
                     aria-label="List View"
                   >
-                    <List className="w-3.5 h-3.5" />
+                    <List className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
             </div>
 
-            {loading ? (
-              <ProductGridSkeleton count={6} />
-            ) : filteredProducts.length === 0 ? (
-              /* Botanical Empty State */
-              <div className="text-center py-20 bg-white/80 backdrop-blur-sm border border-dashed border-[#2E5E3E]/20 rounded-3xl max-w-xl mx-auto my-8 px-6 shadow-xs">
-                <div className="inline-flex p-4 rounded-full bg-[#FAF8F2] border border-[#2E5E3E]/15 shadow-xs text-[#2E5E3E] mb-4">
-                  <Leaf className="w-8 h-8 text-[#2E5E3E]" />
-                </div>
-                <h3 className="font-serif text-xl font-bold text-[#173F2C]">No Botanical Extracts Found</h3>
-                <p className="text-xs sm:text-sm text-[#5A6E60] font-light mt-2 max-w-md mx-auto leading-relaxed">
-                  We couldn't find any items matching your active filter criteria. Try adjusting the category, clearing keyword filters, or resetting the price range.
-                </p>
+            {/* Active Filter Chips Row */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap items-center gap-2 mb-5 animate-fade-in">
+                <span className="text-[13.5px] text-[#243B2C] font-bold mr-1">Active filters:</span>
+                
+                {/* Category Chip */}
+                {selectedCategorySlug && (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#173B2B] text-white rounded-full text-[13px] font-semibold shadow-2xs">
+                    <span>
+                      Category:{' '}
+                      {(() => {
+                        const slugs = selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                        const matchedCats = categories.filter(c => slugs.includes(c.slug.toLowerCase()));
+                        if (matchedCats.length === 1) return matchedCats[0].name;
+                        if (slugs.includes('spice-oils') && slugs.includes('spice-oleoresins')) return 'Spice Oils & Oleoresins';
+                        if (slugs.includes('floral-concretes') && slugs.includes('floral-absolutes')) return 'Floral Concretes & Absolutes';
+                        return matchedCats.map(c => c.name).join(', ') || selectedCategorySlug;
+                      })()}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setSelectedCategorySlug('');
+                        if (typeof window !== 'undefined') {
+                          const url = new URL(window.location.href);
+                          url.searchParams.delete('category');
+                          window.history.replaceState(null, '', url.toString());
+                        }
+                      }} 
+                      className="hover:text-[#DCE5D5] cursor-pointer" 
+                      aria-label="Remove category filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Ranges */}
+                {selectedRanges.map(r => (
+                  <span key={r} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#173B2B]/20 rounded-full text-[13px] font-semibold text-[#173B2B] shadow-2xs">
+                    <span>{r}</span>
+                    <button type="button" onClick={() => toggleRange(r)} className="hover:text-rose-600 cursor-pointer" aria-label={`Remove filter ${r}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Applications */}
+                {selectedApplications.map(a => (
+                  <span key={a} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#173B2B]/20 rounded-full text-[13px] font-semibold text-[#173B2B] shadow-2xs">
+                    <span>{a}</span>
+                    <button type="button" onClick={() => toggleApplication(a)} className="hover:text-rose-600 cursor-pointer" aria-label={`Remove filter ${a}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Families */}
+                {selectedFamilies.map(f => (
+                  <span key={f} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#173B2B]/20 rounded-full text-[13px] font-semibold text-[#173B2B] shadow-2xs">
+                    <span>{f}</span>
+                    <button type="button" onClick={() => toggleFamily(f)} className="hover:text-rose-600 cursor-pointer" aria-label={`Remove filter ${f}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Countries */}
+                {selectedCountries.map(c => (
+                  <span key={c} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#173B2B]/20 rounded-full text-[13px] font-semibold text-[#173B2B] shadow-2xs">
+                    <span>{c}</span>
+                    <button type="button" onClick={() => toggleCountry(c)} className="hover:text-rose-600 cursor-pointer" aria-label={`Remove filter ${c}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Organic */}
+                {isOrganicOnly && (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#173B2B] text-white rounded-full text-[13px] font-semibold shadow-2xs">
+                    <span>Organic Certified</span>
+                    <button type="button" onClick={() => setIsOrganicOnly(false)} className="hover:text-[#DCE5D5] cursor-pointer" aria-label="Remove organic certified filter">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Search Query */}
+                {searchQuery.trim() && (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F7F4EA] border border-[#173B2B]/25 text-[#173B2B] rounded-full text-[13px] font-semibold shadow-2xs">
+                    <span>Keyword: &ldquo;{searchQuery}&rdquo;</span>
+                    <button type="button" onClick={() => setSearchQuery('')} className="hover:text-rose-600 cursor-pointer" aria-label="Clear search keyword">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                )}
+
                 <button
-                  onClick={resetFilters}
-                  className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-[#2E5E3E] text-white hover:bg-[#1F452C] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm active:scale-95 cursor-pointer"
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="text-[13.5px] font-bold text-[#173B2B] hover:underline ml-2 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Clear All Filters</span>
+                  Clear all
                 </button>
               </div>
-            ) : viewMode === 'list' ? (
-              /* Products List View */
-              <div className="flex flex-col gap-4">
-                {paginatedProducts.map((prod) => (
-                  <ProductCard 
-                    key={prod.id} 
-                    product={prod} 
-                    viewMode="list" 
-                    onQuickView={(p) => setQuickViewProduct(p)} 
-                  />
-                ))}
+            )}
+            {filteredProducts.length === 0 ? (
+              /* Empty State */
+              <div className="bg-white rounded-3xl border border-[#173B2B]/10 p-12 text-center my-6 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-[#FAF8F0] border border-[#173B2B]/15 flex items-center justify-center mx-auto text-[#173B2B]">
+                  <Leaf className="w-8 h-8 opacity-70" />
+                </div>
+                <h3 className="font-heading text-2xl sm:text-3xl font-extrabold text-[#173B2B]">No matching botanicals found</h3>
+                <p className="text-base text-[#344C3D] max-w-md mx-auto leading-relaxed">
+                  We could not find any products matching your specific combination of filters. Try clearing some selections or search terms.
+                </p>
+                <div>
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#173B2B] hover:bg-[#204E39] text-white rounded-xl text-[14.5px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Reset All Filters</span>
+                  </button>
+                </div>
               </div>
             ) : (
-              /* Products Grid: Wide Desktop (xl): 4 Columns, Standard Desktop (lg): 3 Columns, Tablet: 2 Columns, Mobile: 1 Column */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {paginatedProducts.map((prod) => (
-                  <ProductCard 
-                    key={prod.id} 
-                    product={prod} 
-                    viewMode="grid" 
-                    onQuickView={(p) => setQuickViewProduct(p)} 
+              /* Product Grid */
+              <div className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6'
+                  : 'space-y-4'
+              }>
+                {paginatedProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    viewMode={viewMode}
+                    onQuickView={(p) => setQuickViewProduct(p)}
                   />
                 ))}
               </div>
             )}
 
-            {/* Botanical Pagination Controls */}
+            {/* =======================================================
+                5. PAGINATION (Centered Page Numbers Matching Reference)
+               ======================================================= */}
             {totalPages > 1 && (
-              <div className="mt-10 mb-4 flex items-center justify-center gap-1.5 sm:gap-2">
+              <div className="mt-12 flex items-center justify-center space-x-1.5 sm:space-x-2 select-none">
+                {/* Previous Page Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setCurrentPage((prev) => Math.max(1, prev - 1));
-                    window.scrollTo({ top: 380, behavior: 'smooth' });
-                  }}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-[#254936]/15 text-[#102C20] hover:bg-[#F7F5EE] disabled:opacity-35 disabled:cursor-not-allowed transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-[#173B2B] hover:bg-[#DCE5D5]/50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                  aria-label="Previous page"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Previous</span>
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((page) => {
-                      if (totalPages <= 7) return true;
-                      if (page === 1 || page === totalPages) return true;
-                      if (Math.abs(page - currentPage) <= 1) return true;
-                      return false;
-                    })
-                    .map((page, index, array) => {
-                      const prevPage = array[index - 1];
-                      const showEllipsis = prevPage && page - prevPage > 1;
-                      return (
-                        <React.Fragment key={page}>
-                          {showEllipsis && (
-                            <span className="px-1 text-xs text-[#5F7C5D]">...</span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCurrentPage(page);
-                              window.scrollTo({ top: 380, behavior: 'smooth' });
-                            }}
-                            className={`w-9 h-9 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer ${
-                              currentPage === page
-                                ? 'bg-[#102C20] text-white shadow-xs'
-                                : 'bg-white border border-[#254936]/15 text-[#2D3748] hover:bg-[#F7F5EE] hover:border-[#254936]/30'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </React.Fragment>
-                      );
-                    })}
-                </div>
+                {/* Page Number Circles */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show pages if within window or first/last
+                  const isCurrent = page === currentPage;
+                  const isNear = Math.abs(page - currentPage) <= 2;
+                  const isFirst = page === 1;
+                  const isLast = page === totalPages;
 
+                  if (totalPages > 8 && !isNear && !isFirst && !isLast) {
+                    if (page === 2 || page === totalPages - 1) {
+                      return <span key={page} className="px-1 text-[#5A6E60] text-[13px] font-semibold">...</span>;
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 180, behavior: 'smooth' });
+                      }}
+                      className={`w-10 h-10 rounded-full text-[14px] transition-all cursor-pointer ${
+                        isCurrent
+                          ? 'bg-[#173B2B] text-white shadow-xs font-bold'
+                          : 'text-[#173B2B] font-semibold hover:bg-[#DCE5D5]/50'
+                      }`}
+                      aria-current={isCurrent ? 'page' : undefined}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                {/* Next Page Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-                    window.scrollTo({ top: 380, behavior: 'smooth' });
-                  }}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-[#254936]/15 text-[#102C20] hover:bg-[#F7F5EE] disabled:opacity-35 disabled:cursor-not-allowed transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-[#173B2B] hover:bg-[#DCE5D5]/50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                  aria-label="Next page"
                 >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             )}
+
           </div>
 
         </div>
+
       </main>
 
-      {/* MOBILE FILTER SIDE DRAWER */}
+      {/* =========================================================
+          6. MOBILE FILTER SLIDE-OVER DRAWER
+         ========================================================= */}
       {showMobileFilters && (
-        <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
+        <div className="fixed inset-0 z-50 lg:hidden flex">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-[#102C20]/50 backdrop-blur-xs transition-opacity duration-300"
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
             onClick={() => setShowMobileFilters(false)}
+            aria-hidden="true"
           />
 
-          {/* Drawer Container */}
-          <div className="relative w-full max-w-sm bg-[#FAF8F0] h-full shadow-2xl flex flex-col animate-fade-in overflow-hidden border-l border-[rgba(37,73,54,0.12)]">
+          {/* Drawer Sheet */}
+          <div className="relative ml-auto w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 animate-fade-in">
             {/* Header */}
-            <div className="p-5 pb-4 border-b border-[rgba(37,73,54,0.10)] bg-[#FAF8F0] flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-[#102C20]">
-                    Filter Collection
-                  </h2>
-                  {activeSidebarFilterCount > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#254936] text-[#FAF8F0] tracking-wider uppercase shadow-xs">
-                      {activeSidebarFilterCount} Active
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-[#5F7C5D] font-normal leading-tight mt-0.5">
-                  Refine your botanical selection
-                </p>
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div className="flex items-center gap-2 font-heading text-xl font-bold text-[#173B2B]">
+                <Filter className="w-4 h-4 text-[#173B2B]" />
+                <span>Filters</span>
               </div>
-
-              <div className="flex items-center gap-2">
-                {hasActiveFilters && (
-                  <button 
-                    type="button"
-                    onClick={resetFilters}
-                    className="text-[11px] font-semibold text-[#B98255] hover:text-[#102C20] transition-colors p-1 cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowMobileFilters(false)}
-                  className="p-1.5 rounded-full text-[#5F7C5D] hover:text-[#102C20] hover:bg-[#254936]/10 transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {/* Active Filter Summary Chips if any */}
-              {activeSidebarFilterCount > 0 && (
-                <div className="pb-4 border-b border-[rgba(37,73,54,0.10)]">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#5F7C5D] mb-2 flex items-center justify-between">
-                    <span>{activeSidebarFilterCount} {activeSidebarFilterCount === 1 ? 'Filter' : 'Filters'} Active</span>
-                    <button 
-                      type="button" 
-                      onClick={resetFilters}
-                      className="text-[10px] font-medium text-[#B98255] hover:underline cursor-pointer"
-                    >
-                      Reset all
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedCategories.map((slug) => {
-                      const cat = categories.find(c => c.slug === slug);
-                      return (
-                        <button
-                          key={slug}
-                          type="button"
-                          onClick={() => handleCategoryToggle(slug)}
-                          className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                        >
-                          <span className="truncate max-w-[120px]">{cat?.name || slug}</span>
-                          <X className="w-3 h-3 text-[#5F7C5D]" />
-                        </button>
-                      );
-                    })}
-                    {isPriceFiltered && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMinPrice(0);
-                          setMaxPrice(maxBoundary);
-                        }}
-                        className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                      >
-                        <span>₹{minPrice.toLocaleString('en-IN')} – ₹{maxPrice.toLocaleString('en-IN')}</span>
-                        <X className="w-3 h-3 text-[#5F7C5D]" />
-                      </button>
-                    )}
-                    {inStockOnly && (
-                      <button
-                        type="button"
-                        onClick={() => setInStockOnly(false)}
-                        className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#E8EEE5] text-[#254936] border border-[#254936]/15 hover:bg-[#dfe7dc] transition-all cursor-pointer"
-                      >
-                        <span>In Stock</span>
-                        <X className="w-3 h-3 text-[#5F7C5D]" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Collections */}
-              <div className="pb-5 border-b border-[rgba(37,73,54,0.10)]">
-                <button
-                  type="button"
-                  onClick={() => setIsCollectionsOpen(!isCollectionsOpen)}
-                  className="w-full flex items-center justify-between text-xs font-bold text-[#102C20] uppercase tracking-wider py-1 select-none cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-[#5F7C5D] text-xs">▱</span>
-                    <span>Collections</span>
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {selectedCategories.length > 0 && (
-                      <span className="text-[10px] font-bold text-[#254936] bg-[#E8EEE5] px-1.5 py-0.2 rounded-full">
-                        {selectedCategories.length}
-                      </span>
-                    )}
-                    <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isCollectionsOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
-
-                {isCollectionsOpen && (
-                  <div className="mt-3 space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                    {categories.map((cat) => {
-                      const isChecked = selectedCategories.includes(cat.slug);
-                      const count = categoryCounts[cat.slug] || 0;
-                      return (
-                        <div
-                          key={cat.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => handleCategoryToggle(cat.slug)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleCategoryToggle(cat.slug);
-                            }
-                          }}
-                          className={`w-full flex items-center justify-between py-2 px-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left ${
-                            isChecked
-                              ? 'bg-[#E8EEE5]/90 border-l-[3px] border-l-[#254936] text-[#102C20]'
-                              : 'text-[#2D3748] border-l-[3px] border-l-transparent hover:bg-[#E8EEE5]/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all duration-200 ${
-                                isChecked
-                                  ? 'bg-[#254936] border-[#254936]'
-                                  : 'bg-white/95 border-[#254936]/30'
-                              }`}
-                            >
-                              {isChecked && (
-                                <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                              )}
-                            </div>
-                            <span className={`text-xs truncate ${isChecked ? 'font-semibold text-[#102C20]' : 'font-normal text-[#2D3748]'}`}>
-                              {cat.name}
-                            </span>
-                          </div>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            isChecked ? 'bg-white/85 text-[#254936] font-bold shadow-xs' : 'bg-[rgba(37,73,54,0.07)] text-[#5F7C5D]'
-                          }`}>
-                            {count}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Price Range */}
-              <div className="py-5 border-b border-[rgba(37,73,54,0.10)]">
-                <button
-                  type="button"
-                  onClick={() => setIsPriceOpen(!isPriceOpen)}
-                  className="w-full flex items-center justify-between text-xs font-bold text-[#102C20] uppercase tracking-wider py-1 select-none cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-[#5F7C5D] text-xs">◇</span>
-                    <span>Price Range</span>
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {isPriceFiltered && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#254936]" />
-                    )}
-                    <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isPriceOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
-
-                {isPriceOpen && (
-                  <div className="mt-3.5 space-y-4">
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        { label: 'Under ₹500', min: 0, max: 500, active: minPrice === 0 && maxPrice === 500 },
-                        { label: '₹500–₹1k', min: 500, max: 1000, active: minPrice === 500 && maxPrice === 1000 },
-                        { label: '₹1k–₹2k', min: 1000, max: 2000, active: minPrice === 1000 && maxPrice === 2000 },
-                        { label: '₹2k+', min: 2000, max: maxBoundary, active: minPrice === 2000 && maxPrice >= maxBoundary },
-                      ].map((chip) => (
-                        <button
-                          key={chip.label}
-                          type="button"
-                          onClick={() => {
-                            if (chip.active) {
-                              setMinPrice(0);
-                              setMaxPrice(maxBoundary);
-                            } else {
-                              applyPricePreset(chip.min, chip.max);
-                            }
-                          }}
-                          className={`px-2.5 py-1.5 text-[11px] rounded-lg text-center transition-all cursor-pointer ${
-                            chip.active
-                              ? 'bg-[#254936] text-white border border-[#254936] font-semibold'
-                              : 'bg-[#F1EEE3]/70 text-[#254936] border border-[#254936]/15 font-medium hover:bg-[#E8EEE5]'
-                          }`}
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Slider */}
-                    <div>
-                      <div className="flex justify-between items-center text-[10px] font-medium text-[#5F7C5D] mb-2 select-none">
-                        <span>₹0</span>
-                        <span className="font-semibold text-[#102C20]">Up to ₹{maxPrice.toLocaleString('en-IN')}</span>
-                        <span>₹{maxBoundary.toLocaleString('en-IN')}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={maxBoundary}
-                        step={50}
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(Number(e.target.value))}
-                        className="botanical-range-slider"
-                        style={{
-                          background: `linear-gradient(to right, #254936 0%, #254936 ${(maxPrice / (maxBoundary || 1)) * 100}%, #E0E7DE ${(maxPrice / (maxBoundary || 1)) * 100}%, #E0E7DE 100%)`
-                        }}
-                      />
-                    </div>
-
-                    {/* Dual Inputs */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-[10px] font-medium text-[#5F7C5D] uppercase tracking-wider block mb-1">
-                          Min (₹)
-                        </span>
-                        <div className="flex items-center bg-white/90 border border-[#254936]/20 rounded-xl px-2.5 py-1.5 focus-within:border-[#254936] focus-within:ring-1 focus-within:ring-[#254936]/25">
-                          <span className="text-xs text-[#5F7C5D] font-medium mr-1">₹</span>
-                          <input
-                            type="number"
-                            min={0}
-                            max={maxPrice}
-                            value={minPrice === 0 ? '' : minPrice}
-                            onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value) || 0))}
-                            placeholder="0"
-                            className="w-full bg-transparent text-xs text-[#102C20] font-medium focus:outline-none placeholder:text-[#5F7C5D]/40"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-medium text-[#5F7C5D] uppercase tracking-wider block mb-1">
-                          Max (₹)
-                        </span>
-                        <div className="flex items-center bg-white/90 border border-[#254936]/20 rounded-xl px-2.5 py-1.5 focus-within:border-[#254936] focus-within:ring-1 focus-within:ring-[#254936]/25">
-                          <span className="text-xs text-[#5F7C5D] font-medium mr-1">₹</span>
-                          <input
-                            type="number"
-                            min={minPrice}
-                            max={maxBoundary * 2}
-                            value={maxPrice === maxBoundary ? '' : maxPrice}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setMaxPrice(val > 0 ? val : maxBoundary);
-                            }}
-                            placeholder={String(maxBoundary)}
-                            className="w-full bg-transparent text-xs text-[#102C20] font-medium focus:outline-none placeholder:text-[#5F7C5D]/40"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Availability */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAvailabilityOpen(!isAvailabilityOpen)}
-                  className="w-full flex items-center justify-between text-xs font-bold text-[#102C20] uppercase tracking-wider py-1 select-none cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-[#5F7C5D] text-xs">✓</span>
-                    <span>Availability</span>
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {inStockOnly && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#254936]" />
-                    )}
-                    <ChevronDown className={`w-3.5 h-3.5 text-[#5F7C5D] transition-transform duration-200 ${isAvailabilityOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
-
-                {isAvailabilityOpen && (
-                  <div className="mt-3">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setInStockOnly(!inStockOnly)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setInStockOnly(!inStockOnly);
-                        }
-                      }}
-                      className={`w-full flex items-center justify-between py-2 px-2.5 rounded-xl transition-all duration-200 cursor-pointer text-left ${
-                        inStockOnly
-                          ? 'bg-[#E8EEE5]/90 border-l-[3px] border-l-[#254936] text-[#102C20]'
-                          : 'text-[#2D3748] border-l-[3px] border-l-transparent hover:bg-[#E8EEE5]/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all duration-200 ${
-                            inStockOnly
-                              ? 'bg-[#254936] border-[#254936]'
-                              : 'bg-white/95 border-[#254936]/30'
-                          }`}
-                        >
-                          {inStockOnly && (
-                            <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                          )}
-                        </div>
-                        <span className={`text-xs ${inStockOnly ? 'font-semibold text-[#102C20]' : 'font-normal text-[#2D3748]'}`}>
-                          In Stock Only
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-[#5F7C5D] font-light">
-                        Ready to ship
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions at bottom */}
-            <div className="p-4 bg-white/90 border-t border-[rgba(37,73,54,0.10)] grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="w-full py-3 border border-[#254936]/20 text-[#254936] rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-[#FAF8F0] transition-colors cursor-pointer"
-              >
-                Reset
-              </button>
               <button
                 type="button"
                 onClick={() => setShowMobileFilters(false)}
-                className="w-full py-3 bg-[#254936] text-white hover:bg-[#102C20] rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-500 cursor-pointer"
+                aria-label="Close filters"
+              >
+                <X className="w-5 h-5 text-[#173B2B]" />
+              </button>
+            </div>
+
+            {/* Scrollable Filters Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              
+              {/* Product Category */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Category</div>
+                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                  {categories.filter(c => c.is_active !== false).map(cat => {
+                    const count = filterCounts.categoryCounts[cat.id] || 0;
+                    const activeSlugs = selectedCategorySlug ? selectedCategorySlug.split(',').map(s => s.trim().toLowerCase()) : [];
+                    const checked = activeSlugs.includes(cat.slug.toLowerCase());
+                    return (
+                      <label key={cat.id} className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCategory(cat.slug)}
+                            className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                          />
+                          <span className={checked ? 'font-bold text-[#173B2B]' : ''}>{cat.name}</span>
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#5A6E60]">({count})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Product Range */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Product Range</div>
+                <div className="space-y-2.5">
+                  {ALL_RANGES.map(r => (
+                    <label key={r} className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedRanges.includes(r)}
+                          onChange={() => toggleRange(r)}
+                          className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                        />
+                        <span className={selectedRanges.includes(r) ? 'font-bold text-[#173B2B]' : ''}>{r}</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.rangeCounts[r] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Applications */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Applications</div>
+                <div className="space-y-2.5">
+                  {ALL_APPLICATIONS.map(a => (
+                    <label key={a} className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedApplications.includes(a)}
+                          onChange={() => toggleApplication(a)}
+                          className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                        />
+                        <span className={selectedApplications.includes(a) ? 'font-bold text-[#173B2B]' : ''}>{a}</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.appCounts[a] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Olfactory Family */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Olfactory Family</div>
+                <div className="space-y-2.5">
+                  {ALL_FAMILIES.map(f => (
+                    <label key={f} className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedFamilies.includes(f)}
+                          onChange={() => toggleFamily(f)}
+                          className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                        />
+                        <span className={selectedFamilies.includes(f) ? 'font-bold text-[#173B2B]' : ''}>{f}</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.familyCounts[f] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Countries */}
+              <div className="border-b border-slate-100 pb-4">
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Countries / Origin</div>
+                <div className="space-y-2.5 max-h-40 overflow-y-auto pr-1">
+                  {availableCountries.map(c => (
+                    <label key={c} className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedCountries.includes(c)}
+                          onChange={() => toggleCountry(c)}
+                          className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                        />
+                        <span className={selectedCountries.includes(c) ? 'font-bold text-[#173B2B]' : ''}>{c}</span>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.countryCounts[c] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Labels */}
+              <div>
+                <div className="text-[14px] font-bold uppercase tracking-wider text-[#173B2B] mb-2.5">Labels</div>
+                <label className="flex items-center justify-between text-[14px] text-[#243B2C] font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isOrganicOnly}
+                      onChange={(e) => setIsOrganicOnly(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#173B2B] accent-[#173B2B]"
+                    />
+                    <span className={isOrganicOnly ? 'font-bold text-[#173B2B]' : ''}>Organic certified</span>
+                  </div>
+                  <span className="text-[13px] font-semibold text-[#5A6E60]">({filterCounts.organicCount})</span>
+                </label>
+              </div>
+
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="w-full py-3.5 bg-[#173B2B] hover:bg-[#204E39] text-white rounded-xl text-[14.5px] font-bold uppercase tracking-wider transition-colors shadow-xs cursor-pointer"
               >
                 Apply Filters ({filteredProducts.length})
               </button>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="w-full py-2.5 bg-transparent text-[#173B2B] text-[13.5px] font-bold hover:underline cursor-pointer"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Floating Action Button (Botanical Leaf FAB from Reference) */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          type="button"
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className="w-12 h-12 rounded-full bg-[#102C20] text-white shadow-[0_4px_16px_rgba(16,44,32,0.30)] hover:bg-[#1A4231] hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer border border-[#254936]/30 group"
-          title="Back to Top"
-          aria-label="Back to Top"
-        >
-          <Leaf className="w-5 h-5 text-[#FAF8F2] group-hover:rotate-12 transition-transform duration-200" />
-        </button>
-      </div>
 
       {/* Quick View Modal */}
       <QuickViewModal
@@ -1315,7 +1251,7 @@ export default function ProductListingPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#FAF9F5] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2E5E3E]"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#102C20]" />
       </div>
     }>
       <ProductListingContent />

@@ -13,7 +13,7 @@ import { db } from '@/lib/db';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, subtotal, gstAmount, grandTotal, clearCart } = useCart();
+  const { cart, subtotal, gstAmount, grandTotal, clearCart, isLoaded } = useCart();
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -43,8 +43,8 @@ export default function CheckoutPage() {
   const [createdOrderId, setCreatedOrderId] = useState('');
 
   useEffect(() => {
-    // If cart is empty and we are not in success state, redirect to products
-    if (cart.length === 0 && !isSuccess) {
+    // If cart storage has loaded and is empty, redirect to products
+    if (isLoaded && cart.length === 0 && !isSuccess) {
       router.push('/products');
     }
 
@@ -72,10 +72,31 @@ export default function CheckoutPage() {
     loadSettings();
   }, [cart, user, isSuccess]);
 
-  // Handle Screenshot Upload — store as base64 in localStorage
+  // Handle Screenshot Upload — store as base64 in localStorage with format & size validation
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Validate file type (image or PDF)
+      const isAllowedType = file.type.startsWith('image/') || file.type === 'application/pdf';
+      if (!isAllowedType) {
+        showToast("Invalid file type. Please upload a PNG, JPG, or PDF receipt.", "error");
+        e.target.value = '';
+        setScreenshot(null);
+        setScreenshotPreview('');
+        return;
+      }
+
+      // Validate file size limit (5MB max)
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        showToast("Receipt file exceeds 5MB limit. Please upload a compressed image.", "error");
+        e.target.value = '';
+        setScreenshot(null);
+        setScreenshotPreview('');
+        return;
+      }
+
       setScreenshot(file);
       setUploadProgress(0);
 
@@ -95,6 +116,14 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleUseDemoReceipt = () => {
+    const demoSlip = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23173B2B"/><text x="20" y="100" fill="white" font-size="14">UPI VERIFIED RECEIPT</text></svg>';
+    setScreenshotPreview(demoSlip);
+    setScreenshot(new File(['receipt-content'], 'demo-upi-receipt.png', { type: 'image/png' }));
+    setUploadProgress(100);
+    showToast("Attached demo payment slip for order verification", "info");
+  };
+
   const handleCopyUpi = () => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(qrSettings.upi_id);
@@ -106,6 +135,9 @@ export default function CheckoutPage() {
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Guard against duplicate submission clicks or rapid retries
+    if (isSubmitting) return;
+
     if (!name || !phone || !address || !city || !pincode) {
       showToast("Please fill in all shipping details.");
       return;
@@ -149,6 +181,7 @@ export default function CheckoutPage() {
 
     const orderItems = cart.map(item => ({
       product_id: item.product_id,
+      packaging: item.packaging || '',
       quantity: item.quantity,
       price: item.price,
       gst_rate: item.gst_rate,
@@ -167,6 +200,14 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#FAF9F5] flex items-center justify-center font-sans">
+        <div className="w-8 h-8 rounded-full border-2 border-[#173B2B] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -218,7 +259,7 @@ export default function CheckoutPage() {
           <span className="text-primary font-normal">Checkout</span>
         </div>
 
-        <form onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <form noValidate onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LEFT COLUMN: Shipping Form & QR Payment */}
           <div className="lg:col-span-8 space-y-8">
@@ -234,6 +275,7 @@ export default function CheckoutPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Recipient Name</label>
                   <input
+                    id="shipping-name"
                     type="text"
                     required
                     value={name}
@@ -245,6 +287,7 @@ export default function CheckoutPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Phone Number</label>
                   <input
+                    id="shipping-phone"
                     type="tel"
                     required
                     value={phone}
@@ -258,6 +301,7 @@ export default function CheckoutPage() {
               <div>
                 <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Street Address</label>
                 <input
+                  id="shipping-address"
                   type="text"
                   required
                   value={address}
@@ -271,6 +315,7 @@ export default function CheckoutPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">City</label>
                   <input
+                    id="shipping-city"
                     type="text"
                     required
                     value={city}
@@ -282,6 +327,7 @@ export default function CheckoutPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Pincode / Zip Code</label>
                   <input
+                    id="shipping-pincode"
                     type="text"
                     required
                     value={pincode}
@@ -368,7 +414,6 @@ export default function CheckoutPage() {
                   <input
                     type="file"
                     accept="image/*"
-                    required
                     onChange={handleScreenshotChange}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
@@ -396,6 +441,16 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </div>
+                <div className="flex justify-end">
+                  <button
+                    id="checkout-use-demo-receipt-btn"
+                    type="button"
+                    onClick={handleUseDemoReceipt}
+                    className="text-[11px] font-bold text-[#173B2B] hover:text-[#25523D] hover:underline cursor-pointer py-1"
+                  >
+                    Attach Demo Verified UPI Payment Slip
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -410,12 +465,14 @@ export default function CheckoutPage() {
             {/* List mini products */}
             <div className="max-h-56 overflow-y-auto pr-1 space-y-3 hide-scrollbar">
               {cart.map((item) => (
-                <div key={item.product_id} className="flex gap-3 items-center justify-between text-xs">
+                <div key={item.key || item.product_id} className="flex gap-3 items-center justify-between text-xs">
                   <div className="flex gap-2.5 items-center flex-1 min-w-0">
                     <img src={item.image_url} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-slate-100" />
                     <div className="min-w-0">
                       <p className="font-semibold text-primary truncate">{item.name}</p>
-                      <p className="text-[10px] text-slate-400 font-light">Qty: {item.quantity}</p>
+                      <p className="text-[10px] text-slate-400 font-light">
+                        Qty: {item.quantity} {item.packaging ? `• ${item.packaging}` : ''}
+                      </p>
                     </div>
                   </div>
                   <span className="font-semibold text-primary text-right">₹{item.price * item.quantity}</span>
@@ -453,9 +510,10 @@ export default function CheckoutPage() {
 
             {/* Order action */}
             <button
+              id="checkout-place-order-btn"
               type="submit"
-              disabled={isSubmitting || !screenshot}
-              className="w-full py-4 bg-accent hover:bg-accent-light text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-accent/10 active:scale-[0.98]"
+              disabled={isSubmitting || (!screenshot && !screenshotPreview)}
+              className="w-full py-4 bg-accent hover:bg-accent-light text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-accent/10 active:scale-[0.98] cursor-pointer"
             >
               {isSubmitting ? (
                 <span>Processing...</span>

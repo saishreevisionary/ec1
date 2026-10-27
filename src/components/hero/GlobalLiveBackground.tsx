@@ -351,33 +351,9 @@ export default function GlobalLiveBackground() {
         </div>
 
         {/* ===================================================================
-            SECTION 2: COLLECTION / CATEGORIES TRANSITION (850px - 1450px)
-            Single Gentle Trailing Foliage Vine entering from Left Page Edge.
-            Right side maintains open negative space for natural asymmetry.
+            SECTION 2: COLLECTION / CATEGORIES TRANSITION
+            Foliage vine is now rendered in the foreground above the card layer
             =================================================================== */}
-        <div className="botanical-gutter-flora botanical-gutter-flora--collection-left">
-          <div className="botanical-branch-organism botanical-branch-organism--collection-left">
-            <svg 
-              className="absolute top-0 left-0 w-full h-full pointer-events-none" 
-              viewBox="0 0 260 340" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M -10 30 C 40 45, 90 90, 110 160 C 130 230, 95 290, 60 340"
-                stroke="#2B5838"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                opacity="0.9"
-              />
-            </svg>
-            <img
-              src="/images/botanical/branch-foliage.png"
-              alt=""
-              className="w-56 h-64 object-contain opacity-85 transform -rotate-12 translate-x-[-20px] translate-y-[20px]"
-            />
-          </div>
-        </div>
 
         {/* ===================================================================
             SECTION 3: COLLECTION TO LOWER SECTIONS TRANSITION
@@ -441,13 +417,9 @@ export default function GlobalLiveBackground() {
         <div className="garden-sunlight-dust absolute top-[38%] left-[12%] w-2.5 h-2.5 rounded-full bg-[#FFF2B2]/45 filter blur-[0.8px] garden-dust-float-3" />
       </div>
 
-      {/* Subtle Film Grain (Ties the Garden Atmosphere into Website Texture) */}
+      {/* Subtle Atmosphere Layer (Ties the Garden Atmosphere into Website Texture) */}
       <div 
-        className="garden-film-grain fixed inset-0 z-[3] pointer-events-none opacity-[0.022]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-          mixBlendMode: 'multiply',
-        }}
+        className="garden-film-grain fixed inset-0 z-[3] pointer-events-none opacity-[0.015] bg-[#173B2B]/5"
       />
     </div>
   );

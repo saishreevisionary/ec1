@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Botanical Products & Essential Oils',
+  title: 'Botanical Products & Natural Extracts Catalogue',
   description:
-    'Explore our pure therapeutic essential oils, herbal hair oils, and organic extracts. Steam distilled and cold pressed in Tamil Nadu, India since 1986.',
+    'Discover authentic botanical ingredients across Essential Oils, Spice Oils, Spice Oleoresins, Floral Concretes, Floral Absolutes, and Spice Powders. Analytical GC-MS testing and bulk export packaging from Venuss Herbo Aromatics.',
   openGraph: {
-    title: 'Pure Essential Oils & Herbal Extracts | Venuss Herbo Aromatics',
+    title: 'Natural Botanical Ingredients & Essential Oils | Venuss Herbo Aromatics',
     description:
-      'Shop premium, lab-tested herbal oils, hair care formulations, and therapeutic essential oils direct from the distillers.',
+      'Complete B2B product catalogue of authentic botanical extracts, essential oils, spice oleoresins, floral absolutes and spice powders manufactured in Tamil Nadu, India.',
   },
 };
 

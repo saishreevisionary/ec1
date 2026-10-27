@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ShieldCheck, Sparkles, Check } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, ShieldCheck, Sparkles, Check, Package } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function CartDrawer() {
@@ -132,9 +132,10 @@ export default function CartDrawer() {
               </div>
             ) : (
               cart.map((item) => {
+                const itemKey = item.key || item.product_id;
                 const maxStock = item.product.stock_quantity;
                 return (
-                  <div key={item.product_id} className="pt-4 first:pt-0 flex gap-3.5 items-start">
+                  <div key={itemKey} data-cart-item-id={item.product_id} className="pt-4 first:pt-0 flex gap-3.5 items-start">
                     {/* Item Thumbnail */}
                     <div className="w-18 h-18 rounded-xl bg-white border border-slate-200 p-1 flex-shrink-0 overflow-hidden relative">
                       <img 
@@ -155,13 +156,21 @@ export default function CartDrawer() {
                           {item.name}
                         </Link>
                         <button
-                          onClick={() => removeFromCart(item.product_id)}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-0.5"
+                          onClick={() => removeFromCart(itemKey)}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-0.5 cursor-pointer"
                           title="Remove item"
+                          aria-label="Remove item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      {item.packaging && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 mt-1">
+                          <Package className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>{item.packaging}</span>
+                        </span>
+                      )}
 
                       <span className="text-[10px] text-slate-400 block mt-0.5">
                         ₹{item.price} each (18% GST)
@@ -171,8 +180,9 @@ export default function CartDrawer() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-slate-200 rounded-lg bg-white p-0.5">
                           <button
-                            onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                            className="p-1 rounded text-slate-500 hover:bg-slate-50"
+                            onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                            className="p-1 rounded text-slate-500 hover:bg-slate-50 disabled:opacity-30 cursor-pointer"
                             aria-label="Decrease quantity"
                           >
                             <Minus className="w-3 h-3" />
@@ -181,9 +191,9 @@ export default function CartDrawer() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                            onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                             disabled={item.quantity >= maxStock}
-                            className="p-1 rounded text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+                            className="p-1 rounded text-slate-500 hover:bg-slate-50 disabled:opacity-30 cursor-pointer"
                             aria-label="Increase quantity"
                           >
                             <Plus className="w-3 h-3" />

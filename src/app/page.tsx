@@ -1,84 +1,91 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
-  Truck, 
-  ShieldCheck, 
   Sparkles, 
-  Shield, 
   ArrowRight, 
-  Mail, 
-  Star, 
-  Lock, 
-  RotateCcw, 
-  Headphones, 
-  Check, 
-  Award,
-  ChevronRight,
-  Heart
+  Award, 
+  Shield, 
+  ShieldCheck, 
+  Mail,
+  Flower2,
+  Leaf,
+  Flame
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import ProductCard from '@/components/ProductCard';
-import { ProductGridSkeleton } from '@/components/SkeletonCard';
 import GlobalLiveBackground from '@/components/hero/GlobalLiveBackground';
-import ProductBotanicalFrame from '@/components/ProductBotanicalFrame';
+import ShopByCategory from '@/components/ShopByCategory';
+import FeaturedProductsSection from '@/components/FeaturedProductsSection';
+import BotanicalBrandStory from '@/components/BotanicalBrandStory';
 import NewsletterBotanicalFrame from '@/components/NewsletterBotanicalFrame';
-import TrustValueCard from '@/components/TrustValueCard';
-import BrandIntro from '@/components/BrandIntro';
 import { db } from '@/lib/db';
-import { Product, Category, CATEGORIES } from '@/lib/seedData';
+import { Product, Category, CATEGORIES, PRODUCTS } from '@/lib/seedData';
 import { useToast } from '@/context/ToastContext';
 
 export default function HomePage() {
   const { showToast } = useToast();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [activeTab, setActiveTab] = useState<'bestsellers' | 'newarrivals' | 'trending'>('bestsellers');
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const [allProducts, setAllProducts] = useState<Product[]>(PRODUCTS);
+  const [isLoading, setIsLoading] = useState(true);
   const [newsletterEmail, setNewsletterEmail] = useState('');
 
   useEffect(() => {
     const loadHomeData = async () => {
-      setIsLoadingProducts(true);
-      // Load categories
-      const cats = await db.getCategories();
-      setCategories(cats.length > 0 ? cats : CATEGORIES);
+      setIsLoading(true);
+      try {
+        const cats = await db.getCategories();
+        if (cats && cats.length > 0) {
+          setCategories(cats);
+        }
 
-      // Load products
-      const prods = await db.getProducts();
-      setAllProducts(prods);
-      setIsLoadingProducts(false);
+        const prods = await db.getProducts();
+        if (prods && prods.length > 0) {
+          setAllProducts(prods);
+        }
+      } catch (err) {
+        console.error('Failed to load DB home data:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadHomeData();
+
+    const handleUpdate = () => {
+      loadHomeData();
+    };
+    window.addEventListener('venuss-categories-updated', handleUpdate);
+    window.addEventListener('venuss-products-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('venuss-categories-updated', handleUpdate);
+      window.removeEventListener('venuss-products-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
-  // Filter products based on tabs
-  const getTabProducts = () => {
-    if (allProducts.length === 0) return [];
-    
-    if (activeTab === 'bestsellers') {
-      // Return first 6 featured items
-      return allProducts.slice(0, 6);
-    } else if (activeTab === 'newarrivals') {
-      // Return new arrivals (items with 'New' badge or slice index 10-16)
-      const news = allProducts.filter(p => p.badge === 'New');
-      return news.length > 0 ? news.slice(0, 6) : allProducts.slice(10, 16);
-    } else {
-      // Return trending items (slice index 20-26)
-      return allProducts.slice(20, 26);
-    }
-  };
+  // Customer-visible products (excludes draft, unpublished, inactive)
+  const visibleProducts = useMemo(() => {
+    return allProducts.filter(p => 
+      p.status !== 'draft' && 
+      (p as any).is_active !== false && 
+      (p as any).is_published !== false
+    );
+  }, [allProducts]);
 
-  const displayedProducts = getTabProducts();
+  // Compute category counts from actual customer-visible product data
+  const productCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    visibleProducts.forEach(p => {
+      counts[p.category_id] = (counts[p.category_id] || 0) + 1;
+    });
+    return counts;
+  }, [visibleProducts]);
 
   return (
     <div className="homepage-shell relative min-h-screen isolation-isolate overflow-x-hidden">
-      {/* CINEMATIC BRAND INTRO OVERLAY (Plays once per browser session) */}
-      <BrandIntro />
-
       {/* GLOBAL FULL-PAGE LIVE BOTANICAL BACKGROUND */}
       <GlobalLiveBackground />
 
@@ -86,393 +93,381 @@ export default function HomePage() {
         <Navbar />
 
         <main className="flex-grow animate-fade-in">
-          {/* HERO SECTION GRID */}
-          <section className="relative px-4 sm:px-6 lg:px-8 pt-6 pb-12 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch relative z-[1]">
-              
-              {/* LEFT SIDE: Main Hero Slide */}
-              <div className="lg:col-span-8 p-6 sm:p-8 md:p-10 lg:p-12 rounded-3xl bg-[#E4ECE5]/75 backdrop-blur-md shadow-sm border border-[#2E5E3E]/15 min-h-[480px]">
-                <div className="hero-content grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] gap-7 lg:gap-8 xl:gap-10 items-center w-full">
+          {/* ====================================================
+              SECTION 1: WIDE BOTANICAL HERO BANNER & 3 DISCOVERY CARDS
+             ==================================================== */}
+          <section className="relative px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-10 sm:pb-12 max-w-7xl mx-auto z-[1]">
+            
+            {/* PART A: WIDE BOTANICAL HERO BANNER */}
+            <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-gradient-to-r from-[#F5F2E9]/95 via-[#FAF9F5]/90 to-[#E5EDE7]/90 backdrop-blur-md shadow-sm border border-[#2E5E3E]/15 overflow-hidden p-6 sm:p-8 md:p-10 lg:p-12 mb-6 sm:mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
                 
-                {/* Left Column: hero-copy */}
-                <div className="hero-copy relative z-[3] flex flex-col justify-between space-y-5 sm:space-y-6 max-w-[570px]">
+                {/* Left Column: Hero Content */}
+                <div className="lg:col-span-7 space-y-4 sm:space-y-6 max-w-xl">
                   {/* Eyebrow badge */}
                   <div>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F5F2E9]/95 backdrop-blur-md text-[10px] uppercase font-bold tracking-widest text-[#2E5E3E] border border-[#2E5E3E]/20 shadow-xs">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FAF9F5] text-xs uppercase font-extrabold tracking-wider text-[#173B2B] border border-[#173B2B]/20 shadow-2xs">
                       <Sparkles className="w-3.5 h-3.5 text-[#D4954B]" />
-                      <span>Est. 1986 — Global Spice & Botanical Extracts</span>
+                      <span>EST. 1986 &bull; GLOBAL SPICE &amp; BOTANICAL EXTRACTS</span>
                     </span>
                   </div>
-                  
-                  {/* Heading & Tagline */}
-                  <div className="space-y-2">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] text-[#173F2C] font-serif max-w-[540px]">
-                      VENUSS HERBO AROMATICS
-                    </h1>
-                    <p className="italic font-serif text-lg sm:text-xl md:text-2xl text-[#C7904A] font-normal leading-snug">
-                      "Nature, Extracted with Precision"
-                    </p>
-                  </div>
-                  
+
+                  {/* Headline */}
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] xl:text-[58px] font-extrabold tracking-tight leading-[1.08] text-[#173B2B] font-heading">
+                    Nature, Extracted with Precision
+                  </h1>
+
                   {/* Description */}
-                  <p className="text-xs sm:text-sm text-[#234E3A]/90 font-light leading-relaxed max-w-[500px]">
-                    India's premier manufacturer and exporter of Essential Oils, Spice Oleoresins, Floral Absolutes, Floral Concretes, and Sterilized Spice Powders for global Flavor, Fragrance, Food, and Personal Care industries.
+                  <p className="text-base sm:text-[17.5px] text-[#244030] font-normal leading-relaxed">
+                    Premium essential oils, spice extracts, floral absolutes and botanical ingredients for flavour, fragrance, food and personal-care applications.
                   </p>
 
                   {/* CTA Buttons */}
-                  <div className="pt-1 flex flex-wrap items-center gap-3">
+                  <div className="pt-2 sm:pt-3 flex flex-wrap items-center gap-3.5">
                     <Link
+                      id="hero-explore-catalogue-btn"
                       href="/products"
-                      className="px-6 py-3 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-95 flex items-center gap-2 shadow-md cursor-pointer"
+                      className="px-7 py-3.5 bg-[#173B2B] hover:bg-[#204E39] text-white rounded-full font-bold text-[14px] sm:text-[14.5px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-95 flex items-center gap-2 shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173B2B] focus-visible:ring-offset-2"
                     >
-                      <span>EXPLORE CATALOG</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>Explore Catalogue</span>
+                      <ArrowRight className="w-4 h-4" />
                     </Link>
                     <Link
+                      id="hero-request-quote-btn"
                       href="/contact"
-                      className="px-6 py-3 bg-[#D48B38] hover:bg-[#BF7A2C] text-white rounded-full font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-md active:scale-95 shadow-sm cursor-pointer"
+                      className="px-7 py-3.5 bg-[#FAF9F5] hover:bg-white text-[#173B2B] border border-[#173B2B]/30 hover:border-[#173B2B] rounded-full font-bold text-[14px] sm:text-[14.5px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] hover:shadow-sm active:scale-95 shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173B2B] focus-visible:ring-offset-2"
                     >
-                      REQUEST A QUOTE
+                      <span>Request a Quote</span>
                     </Link>
                   </div>
-
-                  {/* Desktop Trust Indicators (rendered inside left column on lg+ screens) */}
-                  <div className="hidden lg:grid pt-6 border-t border-[#2E5E3E]/20 grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">100% Pure Extracts</span>
-                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">Steam distilled & supercritical</span>
-                    </div>
-                    <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2.5 xl:pl-3">
-                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">Global Exporter</span>
-                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">Supplying 40+ countries</span>
-                    </div>
-                    <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2.5 xl:pl-3">
-                      <span className="text-[10px] xl:text-[11px] font-bold text-[#173F2C] block uppercase">Quality Certified</span>
-                      <span className="text-[9px] text-[#234E3A]/80 block font-light leading-tight">ISO, HACCP & FSSAI certified</span>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Right Column: hero-visual */}
-                <div className="hero-visual relative z-[2] w-full flex flex-col items-center justify-center">
-                  <div className="relative w-full max-w-[340px] sm:max-w-[380px] lg:max-w-none h-[250px] sm:h-[300px] md:h-[340px] lg:h-[380px] xl:h-[410px] max-h-[430px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-[#2E5E3E]/20 bg-[#FAF9F5]/40 group">
+                {/* Right Column: Realistic Botanical Studio Composition */}
+                <div className="lg:col-span-5 relative w-full flex justify-center">
+                  <div className="relative w-full h-[260px] sm:h-[320px] md:h-[360px] lg:h-[400px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-[#2E5E3E]/15 bg-[#FAF8F0] group">
                     <img
-                      src="/images/botanical-hero.jpg"
-                      alt="Venuss Botanical Dropper Bottle & Herbal Extracts"
-                      className="w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-105"
-                    />
-                    
-                    {/* Subtle gradient overlay at bottom of card */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#132A1C]/85 via-[#132A1C]/30 to-transparent p-3.5 sm:p-4 pt-10 flex flex-col justify-end">
-                      <span className="text-[10.5px] sm:text-[11px] font-bold text-white tracking-wider uppercase drop-shadow-xs">
-                        Pure Steam Distillation
-                      </span>
-                      <span className="text-[9px] text-emerald-200/90 font-light drop-shadow-xs">
-                        Malabar Cardamom & Botanical Elixirs
-                      </span>
-                    </div>
-
-                    {/* Floating Product Badge */}
-                    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#2E5E3E]/20 shadow-xs flex items-center gap-1.5 pointer-events-none">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D48B38] animate-pulse" />
-                      <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-[#173F2C]">
-                        100% Organic Extract
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile / Tablet Trust Indicators (renders below visual on screens < lg) */}
-                <div className="lg:hidden col-span-1 pt-5 border-t border-[#2E5E3E]/20 grid grid-cols-3 gap-2">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">100% Pure Extracts</span>
-                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">Steam distilled</span>
-                  </div>
-                  <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2">
-                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">Global Exporter</span>
-                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">40+ countries</span>
-                  </div>
-                  <div className="space-y-1 border-l border-[#2E5E3E]/20 pl-2">
-                    <span className="text-[10px] font-bold text-[#173F2C] block uppercase">Quality Certified</span>
-                    <span className="text-[8.5px] text-[#234E3A]/80 block font-light leading-tight">ISO & HACCP</span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* RIGHT SIDE: Two Promo Cards */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
-              {/* Card 1: Spice Oleoresins */}
-              <div className="flex-1 rounded-3xl bg-[#F5F2E9]/80 backdrop-blur-sm border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm transition-all duration-200 hover:scale-[1.01] hover:border-[#D4954B]/40 hover:shadow-md">
-                <div className="space-y-3 z-10 max-w-[60%]">
-                  <h3 className="text-base font-extrabold text-[#2E5E3E] font-serif leading-snug">
-                    Spice Oleoresins & Extracts
-                  </h3>
-                  <p className="text-[11px] text-[#D4954B] font-bold tracking-wider uppercase">
-                    Black Pepper, Cardamom, Capsicum
-                  </p>
-                  <Link
-                    href="/products?category=spice-oleoresins"
-                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] shadow-sm"
-                  >
-                    View Oleoresins
-                  </Link>
-                </div>
-                <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 relative">
-                  <img
-                    src="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300"
-                    alt="Spice Oleoresins"
-                    className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-              </div>
-
-              {/* Card 2: Floral Absolutes */}
-              <div className="flex-1 rounded-3xl bg-[#EBE7DC]/80 backdrop-blur-sm border border-[#2E5E3E]/15 p-6 flex items-center justify-between relative overflow-hidden group shadow-sm transition-all duration-200 hover:scale-[1.01] hover:border-[#D4954B]/40 hover:shadow-md">
-                <div className="space-y-3 z-10 max-w-[60%]">
-                  <h3 className="text-base font-extrabold text-[#2E5E3E] font-serif leading-snug">
-                    Floral Concretes & Absolutes
-                  </h3>
-                  <p className="text-[11px] text-[#D4954B] font-bold tracking-wider uppercase">
-                    Jasmine, Rose & Tuberose
-                  </p>
-                  <Link
-                    href="/products?category=floral-absolutes"
-                    className="inline-block px-4 py-2 bg-[#2E5E3E] hover:bg-[#1F452C] text-white rounded-full font-bold text-[10px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] shadow-sm"
-                  >
-                    View Fine Florals
-                  </Link>
-                </div>
-                <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 relative">
-                  <img
-                    src="https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?q=80&w=300"
-                    alt="Floral Absolutes"
-                    className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* HORIZONTAL BUBBLE CATEGORIES SCROLL ROW */}
-        <section className="relative py-8 bg-[#FAF9F5]/70 backdrop-blur-md border-y border-[#2E5E3E]/10 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
-            <div className="flex items-center gap-6 overflow-x-auto pb-2 scrollbar-none hide-scrollbar justify-between">
-              {categories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/products?category=${cat.slug}`}
-                  className="flex flex-col items-center text-center group flex-shrink-0 min-w-[110px]"
-                >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-[#2E5E3E]/20 flex items-center justify-center bg-[#F5F2E9] shadow-inner relative group-hover:border-[#D4954B] transition-all duration-300">
-                    <img
-                      src={cat.image_url}
-                      alt={cat.name}
+                      src="/images/hero/hero-botanical-composite.jpg"
+                      alt="Nature, Extracted with Precision — Amber glass extract bottle with jasmine flowers, lavender, and spices on travertine stone"
+                      className="w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-105 motion-reduce:transform-none"
                       onError={(e) => {
                         const target = e.currentTarget;
-                        if (cat.slug === 'spice-powders' || cat.id === 6) {
-                          target.src = '/images/spice-powders.jpg';
-                        } else {
-                          target.src = '/images/botanical-hero.jpg';
-                        }
+                        target.src = '/images/botanical-hero.jpg';
                       }}
-                      className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500"
                     />
                   </div>
-                  <span className="text-[11px] font-bold text-[#2E5E3E] mt-2 group-hover:text-[#D4954B] transition-colors uppercase">
-                    {cat.name}
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-light mt-0.5 line-clamp-1">
-                    {cat.description}
-                  </span>
-                </Link>
-              ))}
-              
-              {/* Extra bubble for 'All Products' */}
-              <Link
-                href="/products"
-                className="flex flex-col items-center text-center group flex-shrink-0 min-w-[110px]"
-              >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-[#285338]/20 flex items-center justify-center bg-[#285338] shadow-sm relative group-hover:border-[#C88432] transition-all duration-300">
-                  <span className="text-xl text-white">🌿</span>
                 </div>
-                <span className="text-[11px] font-bold text-[#285338] mt-2 group-hover:text-[#C88432] transition-colors uppercase">
-                  All Catalog
-                </span>
-                <span className="text-[9px] text-slate-500 font-light mt-0.5">
-                  View 200+ Products
-                </span>
+
+              </div>
+            </div>
+
+            {/* PART B: THREE DISCOVERY CARDS UNDERNEATH */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
+              {/* Card 1: Fragrance */}
+              <Link
+                id="discovery-card-fragrance"
+                href="/products?application=Fragrance"
+                className="group relative flex flex-col justify-between rounded-2xl sm:rounded-3xl bg-[#17281F] border border-[#173B2B]/40 hover:border-[#D4954B]/50 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden motion-reduce:transform-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4954B]"
+              >
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#0F1C15]">
+                  <img
+                    src="/images/hero/discovery-fragrance.jpg"
+                    alt="Fragrance — Fine fragrance and perfumery botanical creations"
+                    className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-106 motion-reduce:transform-none"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = '/images/products/jasmine-sambac.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#17281F] via-transparent to-black/10 opacity-70" />
+                </div>
+                <div className="p-5 sm:p-6 lg:p-7 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
+                      <Flower2 className="w-5 h-5 text-[#E5A855] shrink-0" />
+                      <h3 className="font-heading font-extrabold text-xl sm:text-[22px] text-white leading-snug group-hover:text-[#E5A855] transition-colors">
+                        Fragrance
+                      </h3>
+                    </div>
+                    <p className="text-[13.5px] sm:text-[14px] text-emerald-100/80 font-normal leading-relaxed mb-5">
+                      Explore our natural ingredients for fine fragrance and perfumery creations.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[12.5px] sm:text-[13px] font-bold uppercase tracking-wider text-[#E5A855] group-hover:text-white transition-colors inline-flex items-center gap-1.5">
+                      <span>Discover Ingredients</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                    <span className="w-7 h-7 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-[#E5A855] group-hover:bg-[#E5A855] group-hover:text-[#17281F] transition-all">
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Card 2: Aromatherapy */}
+              <Link
+                id="discovery-card-aromatherapy"
+                href="/products?application=Aromatherapy"
+                className="group relative flex flex-col justify-between rounded-2xl sm:rounded-3xl bg-[#17281F] border border-[#173B2B]/40 hover:border-[#D4954B]/50 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden motion-reduce:transform-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4954B]"
+              >
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#0F1C15]">
+                  <img
+                    src="/images/hero/discovery-aromatherapy.jpg"
+                    alt="Aromatherapy — Pure botanical oils and extracts for wellness"
+                    className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-106 motion-reduce:transform-none"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = '/images/products/lavender-oil.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#17281F] via-transparent to-black/10 opacity-70" />
+                </div>
+                <div className="p-5 sm:p-6 lg:p-7 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
+                      <Leaf className="w-5 h-5 text-[#E5A855] shrink-0" />
+                      <h3 className="font-heading font-extrabold text-xl sm:text-[22px] text-white leading-snug group-hover:text-[#E5A855] transition-colors">
+                        Aromatherapy
+                      </h3>
+                    </div>
+                    <p className="text-[13.5px] sm:text-[14px] text-emerald-100/80 font-normal leading-relaxed mb-5">
+                      Pure botanical oils and extracts to support natural wellness and aromatherapy applications.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[12.5px] sm:text-[13px] font-bold uppercase tracking-wider text-[#E5A855] group-hover:text-white transition-colors inline-flex items-center gap-1.5">
+                      <span>Discover Ingredients</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                    <span className="w-7 h-7 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-[#E5A855] group-hover:bg-[#E5A855] group-hover:text-[#17281F] transition-all">
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Card 3: Food & Flavour */}
+              <Link
+                id="discovery-card-food-flavour"
+                href="/products?application=Food+%26+Flavour"
+                className="group relative flex flex-col justify-between rounded-2xl sm:rounded-3xl bg-[#17281F] border border-[#173B2B]/40 hover:border-[#D4954B]/50 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden motion-reduce:transform-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4954B]"
+              >
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#0F1C15]">
+                  <img
+                    src="/images/hero/discovery-food-flavour.jpg"
+                    alt="Food and Flavour — Authentic spice extracts and botanical ingredients"
+                    className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-106 motion-reduce:transform-none"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = '/images/spice-powders.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#17281F] via-transparent to-black/10 opacity-70" />
+                </div>
+                <div className="p-5 sm:p-6 lg:p-7 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
+                      <Flame className="w-5 h-5 text-[#E5A855] shrink-0" />
+                      <h3 className="font-heading font-extrabold text-xl sm:text-[22px] text-white leading-snug group-hover:text-[#E5A855] transition-colors">
+                        Food &amp; Flavour
+                      </h3>
+                    </div>
+                    <p className="text-[13.5px] sm:text-[14px] text-emerald-100/80 font-normal leading-relaxed mb-5">
+                      Authentic spice extracts and botanical ingredients for the food and beverage industry.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[12.5px] sm:text-[13px] font-bold uppercase tracking-wider text-[#E5A855] group-hover:text-white transition-colors inline-flex items-center gap-1.5">
+                      <span>Discover Ingredients</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                    <span className="w-7 h-7 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-[#E5A855] group-hover:bg-[#E5A855] group-hover:text-[#17281F] transition-all">
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
               </Link>
             </div>
-          </div>
-        </section>
 
-        {/* TABBED BEST SELLERS SECTION */}
-        <section id="bestsellers" className="relative py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24 overflow-visible">
-          {/* Art-Directed Editorial Botanical Frame around Product Grid */}
-          <ProductBotanicalFrame />
-          
-          {/* Header & Tabs */}
-          <div className="relative z-[10] flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-[#285338]/15 gap-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#285338] tracking-tight font-serif flex items-center gap-2">
-                <span>Featured Botanical Products</span>
-                <span className="text-xl">🌿</span>
-              </h2>
-            </div>
-            
-            {/* Filter Tabs */}
-            <div className="flex bg-[#EAE7DC] rounded-full p-1 text-xs font-bold uppercase tracking-wider">
-              <button
-                onClick={() => setActiveTab('bestsellers')}
-                className={`px-5 py-2 rounded-full transition-all ${
-                  activeTab === 'bestsellers' 
-                    ? 'bg-[#285338] text-white shadow-sm' 
-                    : 'text-[#1F2D24]/70 hover:text-[#285338]'
-                }`}
-              >
-                Top Extracts
-              </button>
-              <button
-                onClick={() => setActiveTab('newarrivals')}
-                className={`px-5 py-2 rounded-full transition-all ${
-                  activeTab === 'newarrivals' 
-                    ? 'bg-[#285338] text-white shadow-sm' 
-                    : 'text-[#1F2D24]/70 hover:text-[#285338]'
-                }`}
-              >
-                New Batches
-              </button>
-              <button
-                onClick={() => setActiveTab('trending')}
-                className={`px-5 py-2 rounded-full transition-all ${
-                  activeTab === 'trending' 
-                    ? 'bg-[#285338] text-white shadow-sm' 
-                    : 'text-[#1F2D24]/70 hover:text-[#285338]'
-                }`}
-              >
-                Export Select
-              </button>
-            </div>
-          </div>
+          </section>
 
-          <div className="relative z-[10] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Col: Product Grid (3/4 width) */}
-            <div className="lg:col-span-9 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {isLoadingProducts ? (
-                <ProductGridSkeleton count={6} />
-              ) : (
-                displayedProducts.map((prod) => (
-                  <ProductCard key={prod.id} product={prod} />
-                ))
-              )}
-            </div>
+          {/* ====================================================
+              SECTION 2: COMPACT CATEGORY STRIP & EDITORIAL BANNER
+             ==================================================== */}
+          <ShopByCategory 
+            categories={categories} 
+            productCounts={productCounts} 
+          />
 
-            {/* Right Col: Trust Badges (1/4 width) */}
-            <div className="lg:col-span-3 lg:sticky lg:top-24">
-              <TrustValueCard />
-            </div>
-          </div>
-        </section>
+          {/* ====================================================
+              SECTION 3: FEATURED PRODUCTS SHOWCASE + VIEW ALL
+             ==================================================== */}
+          <FeaturedProductsSection 
+            products={visibleProducts} 
+            categories={categories} 
+          />
 
-        {/* DARK FOREST GREEN CORPORATE ASSURANCE BANNER */}
-        <section className="relative py-12 bg-[#285338] text-white w-full overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-[1]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-full border border-white/10">
-                <Award className="w-6 h-6 text-[#C88432]" />
+          {/* ====================================================
+              SECTION 4: COMPANY INTRODUCTION & BRAND STORY
+             ==================================================== */}
+          <BotanicalBrandStory />
+
+          {/* ====================================================
+              SECTION E & F: MANUFACTURING ASSURANCE & ENQUIRY PATHWAY
+             ==================================================== */}
+          <section className="relative py-12 bg-[#173B2B] text-white w-full overflow-hidden border-t border-[#D4954B]/20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-[1]">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-full border border-white/10 shrink-0">
+                  <Award className="w-6 h-6 text-[#E8A555]" />
+                </div>
+                <div>
+                  <h4 className="text-[15.5px] sm:text-[16px] font-bold tracking-wider uppercase text-white font-heading">100% Pure Extracts</h4>
+                  <p className="text-[13px] text-emerald-100/90 font-medium mt-0.5">Unadulterated botanical oils</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-bold tracking-wider uppercase">100% Pure Extracts</h4>
-                <p className="text-[10px] text-emerald-100/80 font-light mt-0.5">Unadulterated botanical oils</p>
+
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-full border border-white/10 shrink-0">
+                  <Shield className="w-6 h-6 text-[#E8A555]" />
+                </div>
+                <div>
+                  <h4 className="text-[15.5px] sm:text-[16px] font-bold tracking-wider uppercase text-white font-heading">Steam Sterilized</h4>
+                  <p className="text-[13px] text-emerald-100/90 font-medium mt-0.5">Zero ETO chemical treatments</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-full border border-white/10 shrink-0">
+                  <Sparkles className="w-6 h-6 text-[#E8A555]" />
+                </div>
+                <div>
+                  <h4 className="text-[15.5px] sm:text-[16px] font-bold tracking-wider uppercase text-white font-heading">Custom Formulations</h4>
+                  <p className="text-[13px] text-emerald-100/90 font-medium mt-0.5">Tailored active specs for clients</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-full border border-white/10 shrink-0">
+                  <ShieldCheck className="w-6 h-6 text-[#E8A555]" />
+                </div>
+                <div>
+                  <h4 className="text-[15.5px] sm:text-[16px] font-bold tracking-wider uppercase text-white font-heading">Export Certified</h4>
+                  <p className="text-[13px] text-emerald-100/90 font-medium mt-0.5">Full regulatory documentation</p>
+                </div>
               </div>
             </div>
+          </section>
 
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-full border border-white/10">
-                <Shield className="w-6 h-6 text-[#C88432]" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold tracking-wider uppercase">Steam Sterilized</h4>
-                <p className="text-[10px] text-emerald-100/80 font-light mt-0.5">Zero ETO chemical treatments</p>
+          {/* ====================================================
+              SECTION F: COMPANY ENQUIRY & B2B QUOTATION PATHWAY
+             ==================================================== */}
+          <section className="relative py-14 sm:py-20 bg-[#FAF9F5] border-b border-[#173B2B]/12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="rounded-3xl bg-[#EBE7DC]/80 border border-[#173B2B]/15 p-8 sm:p-12 lg:p-14 relative overflow-hidden shadow-xs">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-[#D48B38]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-8 space-y-4">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-xs uppercase font-bold tracking-wider text-[#173B2B] border border-[#173B2B]/15 shadow-2xs">
+                      <Sparkles className="w-3.5 h-3.5 text-[#D48B38]" />
+                      <span>DIRECT MANUFACTURER ACCESS</span>
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl lg:text-[38px] font-extrabold font-heading text-[#173B2B] leading-tight">
+                      Request Technical Specifications, COAs or Export Quotations
+                    </h2>
+                    <p className="text-base sm:text-[17px] text-[#243B2C] font-normal leading-relaxed max-w-2xl">
+                      Looking for batch-specific GC-MS profiles, minimum order quantities for bulk packaging (5kg to 200kg drums), or regulatory compliance dossiers? Our technical sales team provides responsive support for global B2B procurement.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center gap-4">
+                      <Link
+                        href="/contact?type=quote"
+                        className="px-7 py-3.5 bg-[#173B2B] hover:bg-[#204E39] text-white rounded-full font-bold text-[14.5px] sm:text-[15px] uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] shadow-md cursor-pointer"
+                      >
+                        Request a Quote
+                      </Link>
+                      <Link
+                        href="/about"
+                        className="px-7 py-3.5 bg-white hover:bg-[#FAF9F5] text-[#173B2B] border border-[#173B2B]/20 rounded-full font-bold text-[14.5px] sm:text-[15px] uppercase tracking-wider transition-all duration-200 hover:border-[#D4954B] shadow-2xs cursor-pointer"
+                      >
+                        Company Profile
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-4 bg-white/95 backdrop-blur-sm rounded-2xl p-6 sm:p-7 border border-[#173B2B]/15 space-y-3 shadow-2xs">
+                    <h3 className="font-heading font-extrabold text-[17px] text-[#173B2B] border-b border-[#173B2B]/10 pb-2.5">
+                      Commercial Desk Contact
+                    </h3>
+                    <div className="space-y-2.5 text-[14px] text-[#243B2C] font-medium leading-relaxed">
+                      <div>
+                        <span className="font-bold text-[#173B2B] block">Email:</span>
+                        <a href="mailto:sales@venuss.co.in" className="hover:text-[#D48B38] transition-colors">sales@venuss.co.in</a>
+                      </div>
+                      <div>
+                        <span className="font-bold text-[#173B2B] block">Phone / WhatsApp:</span>
+                        <a href="tel:+914563244154" className="hover:text-[#D48B38] transition-colors">+91 4563 244154 / +91 7708 001856</a>
+                      </div>
+                      <div>
+                        <span className="font-bold text-[#173B2B] block">Facility:</span>
+                        <span>Seithur, Rajapalayam, Tamil Nadu, India</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          </section>
 
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-full border border-white/10">
-                <Sparkles className="w-6 h-6 text-[#C88432]" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold tracking-wider uppercase">Custom Formulations</h4>
-                <p className="text-[10px] text-emerald-100/80 font-light mt-0.5">Tailored active specs for clients</p>
-              </div>
-            </div>
+          {/* ====================================================
+              SECTION 6: NEWSLETTER
+             ==================================================== */}
+          <section className="relative py-20 max-w-4xl mx-auto px-4 text-center overflow-visible">
+            <NewsletterBotanicalFrame />
 
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-full border border-white/10">
-                <ShieldCheck className="w-6 h-6 text-[#C88432]" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold tracking-wider uppercase">Export Certified</h4>
-                <p className="text-[10px] text-emerald-100/80 font-light mt-0.5">Full regulatory documentation</p>
-              </div>
-            </div>
-          </div>
-        </section>
+            <div className="bg-white border border-[#173B2B]/15 rounded-3xl p-8 sm:p-12 relative overflow-hidden shadow-sm z-[10]">
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#D4954B]/10 rounded-full blur-2xl"></div>
 
-        {/* NEWSLETTER */}
-        <section className="relative py-20 max-w-4xl mx-auto px-4 text-center overflow-visible">
-          {/* Dedicated Botanical Margins for Newsletter Section */}
-          <NewsletterBotanicalFrame />
-
-          <div className="bg-white border border-slate-200/60 rounded-3xl p-8 sm:p-12 relative overflow-hidden shadow-sm z-[10]">
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-accent opacity-10 rounded-full blur-2xl"></div>
-
-            <div className="relative z-10 space-y-4">
-              <div className="mx-auto p-3 bg-[#FAF9F5] rounded-full w-fit border border-slate-150">
-                <Mail className="w-6 h-6 text-accent" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-primary font-serif tracking-tight">Stay Curated</h2>
-              <p className="text-sm text-slate-500 font-light max-w-md mx-auto leading-relaxed">
-                Subscribe to receive early access to new batches, science essays, and private collections. No spam, ever.
-              </p>
-              <form onSubmit={(e) => { 
-                e.preventDefault();
-                if (newsletterEmail.trim()) {
-                  // Store subscription
-                  if (typeof window !== 'undefined') {
-                    const subs = JSON.parse(localStorage.getItem('venuss_newsletter_subscribers') || '[]');
-                    const already = subs.some((s: any) => s.email === newsletterEmail.trim());
-                    if (!already) {
-                      subs.push({ email: newsletterEmail.trim(), subscribed_at: new Date().toISOString() });
-                      localStorage.setItem('venuss_newsletter_subscribers', JSON.stringify(subs));
+              <div className="relative z-10 space-y-4">
+                <div className="mx-auto p-3.5 bg-[#FAF9F5] rounded-full w-fit border border-[#173B2B]/15">
+                  <Mail className="w-7 h-7 text-[#D4954B]" />
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-[#173B2B] font-heading tracking-tight">Stay Curated</h2>
+                <p className="text-base sm:text-[17px] text-[#3D5244] font-normal max-w-md mx-auto leading-relaxed">
+                  Subscribe to receive early access to new distillation batches, harvest insights, and technical monographs. No spam, ever.
+                </p>
+                <form onSubmit={(e) => { 
+                  e.preventDefault();
+                  if (newsletterEmail.trim()) {
+                    if (typeof window !== 'undefined') {
+                      const subs = JSON.parse(localStorage.getItem('venuss_newsletter_subscribers') || '[]');
+                      const already = subs.some((s: any) => s.email === newsletterEmail.trim());
+                      if (!already) {
+                        subs.push({ email: newsletterEmail.trim(), subscribed_at: new Date().toISOString() });
+                        localStorage.setItem('venuss_newsletter_subscribers', JSON.stringify(subs));
+                      }
                     }
+                    showToast('Thank you for subscribing! You\'ll receive our botanical updates.', 'success');
+                    setNewsletterEmail('');
                   }
-                  showToast('Thank you for subscribing! You\'ll receive our botanical updates.', 'success');
-                  setNewsletterEmail('');
-                }
-              }} className="pt-4 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  required
-                  value={newsletterEmail}
-                  onChange={e => setNewsletterEmail(e.target.value)}
-                  className="flex-grow px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-slate-400 text-primary font-light"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-primary hover:bg-primary-light text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-[0.98]"
-                >
-                  Subscribe
-                </button>
-              </form>
+                }} className="pt-4 max-w-md mx-auto flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    required
+                    value={newsletterEmail}
+                    onChange={e => setNewsletterEmail(e.target.value)}
+                    className="flex-grow px-4 py-3 bg-white border border-slate-300 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-[#173B2B] focus:border-[#173B2B] placeholder:text-slate-400 text-[#173B2B] font-medium"
+                  />
+                  <button
+                    type="submit"
+                    className="px-7 py-3.5 bg-[#173B2B] hover:bg-[#204E39] text-white rounded-xl text-[14.5px] font-bold uppercase tracking-wider transition-all shadow-md active:scale-[0.98] cursor-pointer"
+                  >
+                    Subscribe
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
         </main>
 

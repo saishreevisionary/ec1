@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Eye, EyeOff, ArrowRight, Leaf, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Leaf, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
@@ -14,11 +14,14 @@ function LoginContent() {
   const { user, login, loginWithGoogle, isLoading } = useAuth();
 
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const redirectTo = searchParams.get('from') || '/dashboard';
+  const redirectTo = searchParams.get('from') || '/account';
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,19 +45,22 @@ function LoginContent() {
       return;
     }
 
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await login(email.trim(), 'customer');
-      setIsSuccess(true);
-      // In local mode, redirect immediately; in Supabase mode, magic link is sent
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          const session = localStorage.getItem('lendorastore_session');
-          if (session) {
-            router.push(redirectTo);
-          }
-        }
-      }, 600);
+      const res = await login(email.trim(), password);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Invalid email or password.');
+      } else {
+        setIsSuccess(true);
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 500);
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -92,7 +98,7 @@ function LoginContent() {
               <Leaf className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold font-serif text-[#2E5E3E]">Welcome Back</h1>
-            <p className="text-sm text-[#3A372E]/60 font-light mt-1">Sign in to your Venuss account</p>
+            <p className="text-sm text-[#3A372E]/60 font-light mt-1">Sign in to your Venuss customer account</p>
           </div>
 
           {/* Card */}
@@ -104,7 +110,7 @@ function LoginContent() {
                   <CheckCircle2 className="w-7 h-7 text-[#2E5E3E]" />
                 </div>
                 <h2 className="text-lg font-bold font-serif text-[#2E5E3E] mb-2">Signed In!</h2>
-                <p className="text-sm text-slate-500 font-light">Redirecting to your dashboard…</p>
+                <p className="text-sm text-slate-500 font-light">Redirecting to your account…</p>
               </div>
             ) : (
               <>
@@ -113,9 +119,8 @@ function LoginContent() {
                   id="login-google"
                   onClick={handleGoogleLogin}
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl text-sm text-[#3A372E] font-medium hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all mb-5"
+                  className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl text-sm text-[#3A372E] font-medium hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all mb-5 cursor-pointer"
                 >
-                  {/* Google SVG icon */}
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -127,7 +132,7 @@ function LoginContent() {
 
                 <div className="flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-slate-100" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or sign in with email</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or sign in with password</span>
                   <div className="flex-1 h-px bg-slate-100" />
                 </div>
 
@@ -156,16 +161,60 @@ function LoginContent() {
                         className="w-full pl-10 pr-4 py-3 bg-[#FAF9F5] border border-slate-200 rounded-xl text-sm text-[#2E5E3E] placeholder:text-slate-400 font-light focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E] transition-all"
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1 font-light">
-                      We'll send you a magic link to sign in securely — no password needed.
-                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="login-password" className="block text-[10px] font-bold uppercase tracking-wider text-[#2E5E3E]">
+                        Password
+                      </label>
+                      <Link 
+                        href="/account?tab=forgot" 
+                        className="text-[11px] text-[#D4954B] hover:text-[#b37936] font-semibold hover:underline"
+                      >
+                        Forgot Password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        autoComplete="current-password"
+                        className="w-full pl-10 pr-10 py-3 bg-[#FAF9F5] border border-slate-200 rounded-xl text-sm text-[#2E5E3E] placeholder:text-slate-400 font-light focus:outline-none focus:ring-2 focus:ring-[#2E5E3E]/30 focus:border-[#2E5E3E] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={e => setRememberMe(e.target.checked)}
+                        className="rounded border-slate-300 text-[#2E5E3E] focus:ring-[#2E5E3E]"
+                      />
+                      <span>Keep me signed in</span>
+                    </label>
                   </div>
 
                   <button
                     id="login-submit"
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#2E5E3E] hover:bg-[#1F452C] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#2E5E3E] hover:bg-[#1F452C] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.98] cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
@@ -175,7 +224,7 @@ function LoginContent() {
                     ) : (
                       <>
                         <LogIn className="w-4 h-4" />
-                        Send Magic Link
+                        Sign In
                       </>
                     )}
                   </button>
@@ -203,8 +252,6 @@ function LoginContent() {
     </div>
   );
 }
-
-import { Suspense } from 'react';
 
 export default function LoginPage() {
   return (

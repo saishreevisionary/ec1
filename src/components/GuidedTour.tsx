@@ -13,15 +13,15 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     targetId: 'tour-logo',
-    title: '🌿 Welcome to NATURELLE',
-    content: 'We offer premium botanical hair care formulated with pure, cold-pressed ingredients for strong, healthy hair.',
+    title: '🌿 Welcome to Venuss Herbo Aromatics',
+    content: 'Explore pure essential oils, spice oleoresins, floral absolutes, and premium botanical extracts.',
     placement: 'bottom-left'
   },
   {
-    targetId: 'tour-categories',
+    targetId: 'shop-by-category',
     title: '🛍️ Curated Collections',
-    content: 'Explore our specialized ranges, from organic Botanical Oils to Active Serums and Scalp Therapy sets.',
-    placement: 'bottom-center'
+    content: 'Explore our specialized ranges, from pure Essential Oils to Spice Extracts and Floral Concretes.',
+    placement: 'top-center'
   },
   {
     targetId: 'tour-search',
@@ -43,7 +43,10 @@ const TOUR_STEPS: TourStep[] = [
   }
 ];
 
+import { usePathname } from 'next/navigation';
+
 export const GuidedTour = () => {
+  const pathname = usePathname();
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightStyle, setHighlightStyle] = useState<{
@@ -72,18 +75,23 @@ export const GuidedTour = () => {
     setHighlightStyle(null);
   };
 
-  // Trigger automatically once on first load
+  // Listen for Escape key to close tour
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem('naturelle_tour_seen');
-    if (!hasSeenTour) {
-      // Small timeout to let initial page hydration finish
-      const timer = setTimeout(() => {
-        startTour();
-        localStorage.setItem('naturelle_tour_seen', 'true');
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isActive) {
+        endTour();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActive]);
+
+  // Keep tour on-demand via the floating button so first visit is never masked/darkened
+  useEffect(() => {
+    if (pathname !== '/') return;
+    localStorage.setItem('venuss_tour_seen', 'true');
+    localStorage.setItem('naturelle_tour_seen', 'true');
+  }, [pathname]);
 
   // Recalculate spotlight and tooltip positioning when active element/step changes
   useEffect(() => {
